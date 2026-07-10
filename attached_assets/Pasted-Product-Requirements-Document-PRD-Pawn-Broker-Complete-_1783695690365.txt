@@ -1,0 +1,1531 @@
+Product Requirements Document (PRD)
+
+Pawn Broker — Complete Gold & Silver Loan Management Web Application
+
+Overview
+
+App/Website Name: Pawn Broker
+
+
+
+Pawn Broker is a comprehensive, full-stack web application designed exclusively for gold and silver loan businesses. It consolidates every operational aspect of a pawnbroking business — customer onboarding, jewellery valuation, loan lifecycle management, interest calculation, payment tracking, receipt generation, compliance documentation, and advanced reporting — into a single, unified platform. The application provides role-based access for Admin, Manager, and Staff users, ensuring that each team member interacts only with the functionality appropriate to their role. With automated reminders, professional PDF receipts, and real-time dashboard analytics, Pawn Broker eliminates manual record-keeping and reduces the risk of errors in day-to-day loan operations.
+
+
+
+Target Audience: Independent pawn shop owners, gold loan business operators, jewellery loan managers, and their operational staff across single and multi-branch setups. The application is designed for users with varying levels of technical proficiency, prioritizing a clean, intuitive interface that non-technical staff can confidently operate. The core problems it solves include fragmented record-keeping across paper and spreadsheets, manual interest calculation errors, missing payment trails, lack of professional customer documentation, and the absence of centralized reporting for business decision-making.
+
+Essential Core Features
+
+2.1 Authentication & Role-Based Access Control
+
+Secure login system with JWT-based authentication via Supabase Auth
+
+Three distinct user roles: Admin, Manager, and Staff
+
+Granular permissions per role: add, view, edit, delete, print, and export
+
+Password encryption and session management
+
+CSRF, XSS, and SQL injection protection enforced at the database policy level (Supabase Row Level Security)
+
+Admin-only user management panel for creating and deactivating accounts
+
+2.2 Business Dashboard
+
+Real-time summary cards: Total Active Loans, Closed Loans, Overdue Loans, and Auction Loans
+
+Gold loans vs. Silver loans breakdown with visual indicators
+
+Today's collections and monthly income totals
+
+Recently added loans table with quick-action buttons
+
+Outstanding balance overview
+
+Interactive charts:
+
+Monthly loan disbursement trends (line/bar chart)
+
+Interest earned over time (area chart)
+
+Loan status distribution (donut/pie chart)
+
+Gold vs. Silver loan ratio (bar chart)
+
+Overdue alerts and upcoming due date notifications displayed in the dashboard header
+
+2.3 Customer Management
+
+Auto-generated unique Customer IDs
+
+Full personal profile: name, date of birth, phone number, WhatsApp number, email
+
+KYC document fields: Aadhaar number, PAN number
+
+Multi-photo upload via Supabase Storage:
+
+Customer photo (with webcam capture option)
+
+Aadhaar front and back images
+
+PAN card image
+
+Digital signature capture
+
+Full address fields: street, city, district, state, pincode
+
+Customer loan history view showing all past and active loans
+
+Customer ledger export (PDF, Excel, CSV)
+
+Search and filter customers by name, phone, Aadhaar, PAN
+
+2.4 Loan Management
+
+Auto-generated unique Loan Numbers
+
+Loan types: Gold Loan and Silver Loan
+
+Complete jewellery details per loan:
+
+Jewellery type (ring, necklace, chain, bangle, earring, etc.)
+
+Category (ornament, coin, bar, etc.)
+
+Gross weight, stone weight, net weight (in grams)
+
+Purity selection: Gold (18K, 20K, 22K, 24K) and Silver (80%, 92.5%, 99%, 99.9%)
+
+Estimated value and current market value fields
+
+Interest configuration:
+
+Simple Interest and Compound Interest modes
+
+Rate entry by day, month, or year
+
+Automatic total interest and payable amount calculation (live as user types)
+
+Penalty interest rate for overdue loans
+
+Loan duration in days, months, or years
+
+Automatic due date and expiry date calculation
+
+Loan statuses: Active, Closed, Overdue, Auction, Partially Paid
+
+Loan renewal workflow:
+
+Recalculated interest on renewal
+
+Renewal history log with timestamps
+
+Loan closing workflow:
+
+Final payable amount display
+
+Optional discount field with approval rules by role
+
+Closing receipt generation
+
+Multi-jewellery item support per single loan
+
+Loan photo attachment (jewellery photos)
+
+2.5 Payment Tracking
+
+Payment entry for each loan:
+
+Amount paid, interest paid, principal paid, penalty paid
+
+Remaining principal balance and remaining interest balance
+
+Payment modes: Cash, UPI, Bank Transfer, Cheque
+
+Reference number and auto-generated Receipt Number per payment
+
+Full payment history per loan with timestamps
+
+Partial payment support with running balance updates
+
+Overpayment detection and warning alerts
+
+2.6 Receipt & Document Generation
+
+Professionally designed, printable receipts including:
+
+Company name, logo, and address
+
+Loan number and customer name
+
+Jewellery details summary
+
+Payment breakdown table
+
+QR code and barcode
+
+Signature area
+
+Receipts downloadable as PDF via browser print or direct PDF export
+
+Loan agreement document generation
+
+Closing certificate generation
+
+All documents branded with configurable company details
+
+2.7 Interest Calculator (Standalone Tool)
+
+Accessible from the sidebar as an independent calculator
+
+Inputs: Principal amount, interest rate, rate period (daily/monthly/yearly), loan duration
+
+Toggle between Simple Interest and Compound Interest
+
+Instant output: total interest, total payable, monthly breakdown table
+
+Penalty interest calculator with overdue days input
+
+2.8 Reporting & Export
+
+Report types:
+
+Daily, weekly, monthly, yearly collection reports
+
+Interest collection reports
+
+Outstanding loan reports
+
+Overdue and auction loan reports
+
+Customer ledger reports
+
+Loan ledger reports
+
+Renewal history reports
+
+Staff activity reports (Admin only)
+
+Date range picker for all reports
+
+Filter by loan type (Gold/Silver), loan status, staff member, payment mode
+
+Export formats: PDF, Excel (.xlsx), CSV
+
+Printable report views with company header
+
+2.9 Notification & Reminder System
+
+Automatic reminder triggers:
+
+Upcoming due dates (configurable: 7, 3, 1 day before)
+
+Overdue loan alerts
+
+Expiry date warnings
+
+Delivery channels: SMS, WhatsApp, Email (via integrated third-party APIs)
+
+In-app notification center with unread count badge
+
+Reminder log with sent/failed status per notification
+
+2.10 Settings & Configuration
+
+Company profile setup: name, logo, address, phone, email, GST number
+
+Interest rate defaults and penalty rate configuration
+
+SMS/WhatsApp/Email API key configuration
+
+User management (Admin only): create, edit, deactivate users; assign roles
+
+Database backup and restore (Admin only)
+
+Barcode and QR code format settings
+
+Dark mode / Light mode toggle (persisted per user)
+
+Audit log viewer: who changed what and when
+
+2.11 Search & Filter System
+
+Global search bar accessible from the top navigation
+
+Search across: customer name, phone number, loan number, Aadhaar, PAN, jewellery type, loan status
+
+Advanced filter panel on loan and customer list pages
+
+Real-time search results with highlighted matching text
+
+2.12 Progressive Web App (PWA) Capabilities
+
+Offline support with service worker caching for read-only data
+
+Installable on desktop and mobile browsers
+
+Responsive layout optimized for desktop, tablet, and mobile screen sizes
+
+Tech Stack
+
+Front-End
+
+Framework: React (with Vite as the build tool)
+
+Styling: Tailwind CSS
+
+UI Components: ShadCN UI component library
+
+Charts: Recharts for all dashboard data visualizations
+
+PDF Generation: React-PDF / jsPDF with html2canvas for receipt and report downloads
+
+Excel Export: SheetJS (xlsx library)
+
+Barcode/QR Code: react-qr-code and react-barcode libraries
+
+Webcam Capture: react-webcam for customer photo and signature capture
+
+Form Management: React Hook Form with Zod validation
+
+State Management: Zustand for global client-side state
+
+Date Handling: date-fns
+
+Back-End
+
+Platform: Supabase
+
+Authentication: Supabase Auth with JWT tokens and role-based Row Level Security (RLS) policies
+
+Database: Supabase PostgreSQL — structured relational tables for customers, loans, payments, renewals, jewellery items, notifications, audit logs, users, roles, settings, and documents
+
+Storage: Supabase Storage buckets for customer photos, KYC documents, jewellery images, and company logos
+
+Real-Time: Supabase Realtime subscriptions for live dashboard updates and notification delivery
+
+Edge Functions: Supabase Edge Functions for server-side PDF generation triggers, scheduled reminders, and backup operations
+
+APIs & Integrations
+
+SMS Notifications: Twilio SMS API or MSG91 (configurable in settings)
+
+WhatsApp Notifications: Twilio WhatsApp API or WATI (configurable in settings)
+
+Email Notifications: Resend API or SendGrid for transactional emails
+
+Market Gold/Silver Prices (optional): Metal price API (e.g., metals-api.com) for live market value suggestions during loan entry
+
+Technical Requirements
+
+Supabase RLS policies enforcing role-based data access at the database level
+
+All file uploads stored in private Supabase Storage buckets with signed URLs
+
+Service worker registered for PWA offline caching
+
+All forms include client-side and server-side validation
+
+Audit logging for all create, update, and delete operations stored in a dedicated audit_logs table
+
+Environment variables managed securely via Vite .env configuration
+
+Design Preferences
+
+Interface
+
+The application uses a professional, data-dense yet visually clean interface with a sidebar-first layout optimized for desktop business use, transitioning to a collapsible hamburger navigation on tablet and mobile. The overall tone is trustworthy and efficient — conveying security and precision appropriate for financial services.
+
+Color Palette
+
+Role
+
+Color
+
+Hex
+
+Primary
+
+Deep Indigo / Navy Blue
+
+#1E3A5F
+
+Secondary
+
+Warm Gold
+
+#D4A017
+
+Accent
+
+Emerald Green
+
+#10B981
+
+Background (Light)
+
+Off-White / Soft Gray
+
+#F8FAFC
+
+Background (Dark)
+
+Deep Charcoal
+
+#0F172A
+
+Danger / Overdue
+
+Crimson Red
+
+#EF4444
+
+Warning
+
+Amber
+
+#F59E0B
+
+Success
+
+Green
+
+#22C55E
+
+Text (Primary)
+
+Near Black
+
+#1E293B
+
+Text (Secondary)
+
+Cool Gray
+
+#64748B
+
+Typography
+
+Headings: Inter (bold weights 600–700) — clean, professional, highly legible for financial data
+
+Body Text: Inter (regular weight 400, medium 500) — consistent with headings for visual cohesion
+
+Monospace (for loan numbers, IDs, amounts): JetBrains Mono — clearly distinguishes financial reference numbers
+
+Additional Design Considerations
+
+Dark Mode: Full dark mode support toggled per user preference, persisted in Supabase user profile
+
+Data Tables: Striped rows, sticky headers, sortable columns, and pagination for all list views
+
+Status Badges: Color-coded pill badges for loan statuses (Active = Green, Overdue = Red, Closed = Gray, Auction = Orange, Partially Paid = Blue)
+
+Card Components: Subtle shadow and rounded corners (8px radius) on dashboard metric cards
+
+Icons: Lucide React icon set throughout the application
+
+Print Styles: Dedicated print CSS stylesheets for clean receipt and report printing (hiding sidebar, navigation, and action buttons)
+
+Loading States: Skeleton loaders for all data-fetching components
+
+Empty States: Illustrated empty state components with contextual call-to-action buttons
+
+All Screens/Pages
+
+5.1 Login Screen
+
+Route: /login
+
+
+
+UI Elements:
+
+Centered card layout with company logo
+
+Email/phone input field
+
+Password input field with show/hide toggle
+
+"Remember Me" checkbox
+
+Login button (primary)
+
+Forgot Password link
+
+App version number in footer
+
+Navigation:
+
+Entry: Default redirect for unauthenticated users from any route
+
+Exit: On successful authentication → redirects to /dashboard
+
+Forgot Password link → /forgot-password
+
+Conditional Elements:
+
+Error toast on failed login attempt
+
+Loading spinner on login button during authentication
+
+5.2 Forgot Password Screen
+
+Route: /forgot-password
+
+
+
+UI Elements:
+
+Email input field
+
+Send Reset Link button
+
+Back to Login link
+
+Navigation:
+
+Entry: From Login screen
+
+Exit: On success → confirmation message displayed; Back to Login → /login
+
+5.3 Dashboard
+
+Route: /dashboard
+
+
+
+UI Elements:
+
+Top navigation bar with global search, notification bell (with unread badge), dark mode toggle, and user avatar dropdown
+
+Left sidebar (expanded on desktop, collapsible on tablet/mobile)
+
+Summary metric cards row:
+
+Total Active Loans
+
+Total Overdue Loans
+
+Today's Collection (₹)
+
+Monthly Income (₹)
+
+Total Loan Portfolio Value (₹)
+
+Auction Loans count
+
+Gold vs. Silver loan split indicator bar
+
+Charts section:
+
+Monthly Disbursement Trend (bar/line chart)
+
+Loan Status Distribution (donut chart)
+
+Interest Earned Over Time (area chart)
+
+Gold vs. Silver Ratio (horizontal bar chart)
+
+Recent Loans table: columns for Loan No., Customer, Type, Amount, Status, Due Date, Actions
+
+Upcoming Due Dates alert panel (next 7 days)
+
+Overdue Loans alert panel with count and quick-link
+
+Navigation:
+
+Entry: Post-login redirect; accessible from sidebar "Dashboard" link at all times
+
+Exit: Click any sidebar item, metric card quick-link, or table row action
+
+Conditional Elements:
+
+Role-dependent metric cards (Staff sees fewer financial aggregates than Admin)
+
+Empty state illustration if no loans exist yet
+
+5.4 Customer List Screen
+
+Route: /customers
+
+
+
+UI Elements:
+
+Page header with "Customers" title and "Add New Customer" button (hidden for Staff role)
+
+Search bar (name, phone, Aadhaar, PAN)
+
+Filter panel (city, state, date joined range)
+
+Data table columns: Customer ID, Photo thumbnail, Name, Phone, Aadhaar (masked), Active Loans count, Date Added, Actions (View, Edit, Delete)
+
+Pagination controls
+
+Export button (PDF, Excel, CSV) — Manager and Admin only
+
+Navigation:
+
+Entry: Sidebar "Customers" link
+
+Exit: "Add New Customer" → /customers/new; Row "View" → /customers/; Row "Edit" → /customers//edit
+
+5.5 Add / Edit Customer Screen
+
+Route: /customers/new | /customers//edit
+
+
+
+UI Elements:
+
+Multi-section form with tab or accordion layout:
+
+Personal Details: Name, date of birth, gender, phone, WhatsApp number, email
+
+KYC Documents: Aadhaar number, PAN number
+
+Address: Street, city, district, state, pincode
+
+Photos & Documents: Upload zones for customer photo, Aadhaar front, Aadhaar back, PAN card, digital signature; webcam capture button for each
+
+Auto-generated Customer ID display (read-only on edit)
+
+Save/Update button and Cancel button
+
+Delete button (Admin only, on edit screen) with confirmation modal
+
+Navigation:
+
+Entry: From Customer List "Add New Customer" or row "Edit"
+
+Exit: Save → /customers/; Cancel → /customers
+
+Conditional Elements:
+
+Webcam capture modal opens on camera icon click
+
+Image preview after upload with remove option
+
+Validation error messages per field
+
+5.6 Customer Detail / Profile Screen
+
+Route: /customers/
+
+
+
+UI Elements:
+
+Customer profile header: photo, name, Customer ID, phone, status badges
+
+Tab navigation within the page:
+
+Profile: All personal, KYC, and address details with document image thumbnails
+
+Loans: Table of all loans for this customer (Loan No., Type, Amount, Status, Due Date, Actions)
+
+Payments: Aggregated payment history across all loans
+
+Documents: Uploaded KYC images with download/view options
+
+"Add New Loan" button linked to this customer
+
+"Edit Customer" button
+
+Customer Ledger export button
+
+Navigation:
+
+Entry: From Customer List row "View" or from Loan Detail screen
+
+Exit: "Edit Customer" → /customers//edit; "Add New Loan" → /loans/new?customer=; Back → /customers
+
+5.7 Loan List Screen
+
+Route: /loans
+
+
+
+UI Elements:
+
+Page header "Loans" with "New Loan" button
+
+Advanced filter bar:
+
+Search input (loan number, customer name, phone, jewellery type)
+
+Status filter dropdown (All, Active, Closed, Overdue, Auction, Partially Paid)
+
+Loan type filter (All, Gold, Silver)
+
+Date range picker (loan date)
+
+Sort options
+
+Data table columns: Loan No., Customer Name, Type (Gold/Silver icon), Principal (₹), Interest Rate, Due Date, Status badge, Days Overdue (if applicable), Actions (View, Print, Edit, Close)
+
+Color-coded row highlighting: red for overdue, orange for expiring soon
+
+Bulk action bar (Admin/Manager): bulk export selected loans
+
+Pagination
+
+Navigation:
+
+Entry: Sidebar "Loans" link; Dashboard recent loans table; Customer Profile "Loans" tab
+
+Exit: "New Loan" → /loans/new; Row "View" → /loans/; Row "Edit" → /loans//edit
+
+5.8 Add / Edit Loan Screen
+
+Route: /loans/new | /loans//edit
+
+
+
+UI Elements:
+
+Stepper/wizard layout with 3 steps:
+
+Step 1 — Customer Selection:
+
+Customer search autocomplete (by name, phone, Customer ID)
+
+Auto-fill customer details on selection
+
+"Create New Customer" shortcut link
+
+Step 2 — Jewellery Details:
+
+Repeatable jewellery item rows (add/remove items)
+
+Per item: jewellery type, category, gross weight, stone weight, net weight (auto-calculated), purity dropdown, estimated value, market value, item photo upload
+
+Item subtotal
+
+Step 3 — Loan Terms:
+
+Loan type (Gold/Silver) — auto-detected from purity but overridable
+
+Principal amount input
+
+Interest rate input with period selector (per day / per month / per year)
+
+Interest type toggle (Simple / Compound)
+
+Loan duration with unit selector (days / months / years)
+
+Auto-calculated: Due Date, Expiry Date, Total Interest, Total Payable Amount — all updated live as inputs change
+
+Penalty interest rate field
+
+Loan notes / remarks text area
+
+Loan Number display (auto-generated, shown after Step 3 confirmation)
+
+Save Draft and Submit buttons
+
+Back button per step
+
+Navigation:
+
+Entry: "New Loan" from Loan List or Customer Profile
+
+Exit: On submit → /loans/; Cancel → /loans
+
+Conditional Elements:
+
+Live interest calculation panel always visible on Step 3
+
+Multiple jewellery rows with add/remove controls
+
+Customer auto-populated if arriving from Customer Profile
+
+5.9 Loan Detail Screen
+
+Route: /loans/
+
+
+
+UI Elements:
+
+Loan header card: Loan No., Status badge, Customer name (link), Loan type icon, Created date
+
+Loan Summary section:
+
+Principal, interest rate, interest type, loan duration, due date, expiry date
+
+Total interest, total payable, amount paid, outstanding balance
+
+Penalty details if overdue
+
+Jewellery Items table: type, category, weights, purity, values, photo thumbnail
+
+Payment History table: date, receipt no., amount paid, interest paid, principal paid, penalty paid, mode, reference, balance
+
+Action buttons:
+
+Record Payment (Active/Overdue/Partially Paid status)
+
+Renew Loan (Active status)
+
+Close Loan (all non-Closed statuses)
+
+Print Loan Summary
+
+Download Loan Agreement PDF
+
+Renewal History accordion (expands to show past renewals)
+
+Audit Trail section (Admin/Manager only): timestamped change log
+
+Navigation:
+
+Entry: Loan List row "View"; Dashboard recent loans; Customer Profile
+
+Exit: Customer name link → /customers/; "Record Payment" → opens payment modal; "Renew" → opens renewal modal; "Close" → opens close loan modal
+
+5.10 Record Payment Modal / Screen
+
+Route: Modal overlay on /loans/ (or /loans//payment as full-screen on mobile)
+
+
+
+UI Elements:
+
+Loan number and customer name header (read-only)
+
+Outstanding balance display (principal + interest + penalty)
+
+Payment date picker (defaults to today)
+
+Amount paid input
+
+Auto-split display: how much goes to penalty, interest, and principal
+
+Manual override fields: interest paid, principal paid, penalty paid
+
+Remaining balance after this payment (live update)
+
+Payment mode selector: Cash, UPI, Bank Transfer, Cheque
+
+Reference number input (required for UPI, Bank Transfer, Cheque)
+
+Notes/remarks
+
+Receipt number (auto-generated, displayed)
+
+"Save & Print Receipt" button
+
+"Save Only" button
+
+Cancel button
+
+Conditional Elements:
+
+If payment clears full outstanding balance, prompt to mark loan as Closed
+
+Warning if amount entered exceeds outstanding balance
+
+Cheque details fields appear if mode = Cheque
+
+5.11 Loan Renewal Modal
+
+Route: Modal overlay on /loans/
+
+
+
+UI Elements:
+
+Current loan summary (read-only): principal, outstanding interest, due date
+
+New loan terms section:
+
+New interest rate (prefilled with existing, editable)
+
+New duration with unit selector
+
+New due date (auto-calculated)
+
+Recalculated total payable display
+
+Interest settlement option: carry forward or capitalize outstanding interest
+
+Remarks field
+
+Confirm Renewal button
+
+Cancel button
+
+5.12 Close Loan Modal
+
+Route: Modal overlay on /loans/
+
+
+
+UI Elements:
+
+Outstanding amount display (principal + accrued interest + penalty)
+
+Final payable amount
+
+Discount field (Manager/Admin only): flat or percentage
+
+Amount payable after discount
+
+Payment details: mode, reference number
+
+Notes field
+
+Confirm & Close Loan button
+
+Closing receipt preview toggle
+
+Cancel button
+
+5.13 Receipt Screen / Print View
+
+Route: /loans//receipts/ | /loans//receipts//print
+
+
+
+UI Elements:
+
+Full receipt layout:
+
+Company logo and name header
+
+Company address, phone, GST number
+
+Receipt number and date
+
+Customer details: name, phone, Customer ID
+
+Loan number and type
+
+Jewellery summary table
+
+Payment breakdown: amount paid, interest paid, principal paid, penalty paid
+
+Outstanding balance after payment
+
+Payment mode and reference number
+
+QR code (linking to loan or encoded payment details)
+
+Barcode (loan number)
+
+"Received By" and signature area
+
+"Customer Signature" area
+
+Print button (triggers browser print with print-only CSS)
+
+Download PDF button
+
+Back button
+
+Navigation:
+
+Entry: "Save & Print Receipt" from payment modal; Receipt History links
+
+Exit: Back → /loans/
+
+5.14 Payment & Receipt List Screen
+
+Route: /payments
+
+
+
+UI Elements:
+
+Page header "Payments"
+
+Search bar (receipt number, loan number, customer name)
+
+Filter: date range, payment mode, loan type
+
+Data table: Receipt No., Date, Loan No., Customer, Amount Paid, Mode, Processed By, Actions (View, Print)
+
+Totals summary row at table footer: total collected for filtered range
+
+Export button (PDF, Excel, CSV)
+
+Navigation:
+
+Entry: Sidebar "Payments" link
+
+Exit: Row "View" → /loans//receipts/
+
+5.15 Reports Screen
+
+Route: /reports
+
+
+
+UI Elements:
+
+Report type selector (tab or card grid):
+
+Daily Collection Report
+
+Weekly Collection Report
+
+Monthly Collection Report
+
+Yearly Collection Report
+
+Interest Collection Report
+
+Outstanding Loans Report
+
+Overdue Loans Report
+
+Auction Loans Report
+
+Customer Ledger Report
+
+Loan Ledger Report
+
+Renewal History Report
+
+Staff Activity Report (Admin only)
+
+On report type selection:
+
+Date range picker
+
+Secondary filters (loan type, status, staff member, payment mode)
+
+"Generate Report" button
+
+Report output area:
+
+Summary metrics cards
+
+Data table with sortable columns
+
+Totals row
+
+Export buttons: PDF, Excel, CSV
+
+Print button
+
+Navigation:
+
+Entry: Sidebar "Reports" link
+
+Exit: Navigate to other sidebar items
+
+5.16 Interest Calculator Screen
+
+Route: /calculator
+
+
+
+UI Elements:
+
+Calculator card layout:
+
+Principal amount input
+
+Interest rate input
+
+Rate period selector (Per Day / Per Month / Per Year)
+
+Interest type toggle (Simple Interest / Compound Interest)
+
+Loan duration input with unit selector
+
+Penalty interest rate input
+
+Overdue days input
+
+Results panel:
+
+Total Interest
+
+Penalty Interest
+
+Total Payable Amount
+
+Monthly breakdown table (optional expand)
+
+Reset button
+
+"Use These Values for New Loan" button (navigates to /loans/new with prefilled values)
+
+Navigation:
+
+Entry: Sidebar "Calculator" link; button on Loan form Step 3
+
+Exit: Navigate to other sidebar items or back to loan form
+
+5.17 Notification Center Screen
+
+Route: /notifications
+
+
+
+UI Elements:
+
+Page header "Notifications" with "Mark All Read" button
+
+Filter tabs: All, Unread, Due Date Alerts, Overdue Alerts, Expiry Alerts, System
+
+Notification list items: icon, title, message body, related loan/customer link, timestamp, read/unread indicator
+
+Individual notification: dismiss, mark read, click-through to related record
+
+Pagination or infinite scroll
+
+Notification settings quick-link → /settings/notifications
+
+Navigation:
+
+Entry: Notification bell icon in top navigation bar
+
+Exit: Click notification item → related loan or customer screen; Navigate sidebar
+
+5.18 User Management Screen
+
+Route: /settings/users (Admin only)
+
+
+
+UI Elements:
+
+Page header "Users" with "Add New User" button
+
+Data table: User ID, Name, Email, Role badge, Status (Active/Inactive), Last Login, Actions (Edit, Deactivate)
+
+Add/Edit User modal:
+
+Name, email, phone
+
+Role selector (Admin, Manager, Staff)
+
+Branch assignment (if multi-branch)
+
+Password set / reset
+
+Account status toggle
+
+Deactivate confirmation dialog
+
+Navigation:
+
+Entry: Settings sidebar item "Users"
+
+Exit: Other settings subpages; Back to main navigation
+
+5.19 Settings Screen
+
+Route: /settings
+
+
+
+UI Elements:
+
+Settings sidebar submenu with sections:
+
+Company Profile (/settings/company): Logo upload, company name, address, phone, email, GST number, website
+
+Loan Defaults (/settings/loan-defaults): Default interest rate, default loan duration, penalty rate, interest type default
+
+Notifications (/settings/notifications): Reminder days configuration, toggle per channel (SMS/WhatsApp/Email), API key inputs for each service
+
+Appearance (/settings/appearance): Dark/Light mode toggle, accent color picker (limited presets), receipt logo and footer text
+
+Users (/settings/users): (Admin only, per above)
+
+Audit Log (/settings/audit-log): (Admin/Manager) timestamped log table of all system actions
+
+Backup & Restore (/settings/backup): (Admin only) Download full database backup, upload and restore
+
+Navigation:
+
+Entry: Sidebar "Settings" link (gear icon); bottom of sidebar
+
+Exit: Navigate to other main sidebar sections
+
+5.20 Audit Log Screen
+
+Route: /settings/audit-log (Admin/Manager)
+
+
+
+UI Elements:
+
+Date range filter
+
+User filter dropdown
+
+Action type filter (Created, Updated, Deleted, Login, Export)
+
+Data table: Timestamp, User, Action, Entity Type, Entity ID, Details (expandable), IP Address
+
+Export to PDF/CSV
+
+5.21 404 / Not Found Screen
+
+Route: *
+
+
+
+UI Elements:
+
+Friendly error illustration
+
+"Page Not Found" message
+
+Back to Dashboard button
+
+App Menu and Navigation Structure
+
+Navigation System
+
+A fixed left sidebar is the primary navigation mechanism on desktop (width: 240px expanded, 64px collapsed icon-only mode). On tablets and mobile, the sidebar collapses behind a hamburger menu toggle in the top navigation bar. A persistent top navigation bar spans the full width above the content area.
+
+Top Navigation Bar (All Screens Post-Login)
+
+Left: Hamburger/collapse toggle for sidebar + App logo/name
+
+Center: Global search bar with instant results dropdown (customers, loans, receipts)
+
+Right:
+
+Dark/Light mode toggle
+
+Notification bell with unread count badge → /notifications
+
+User avatar dropdown: Profile, Change Password, Logout
+
+Left Sidebar Navigation Hierarchy
+
+📊 Dashboard                    /dashboard
+
+👥 Customers                    /customers├── All Customers└── Add New Customer         /customers/new
+
+📋 Loans                        /loans├── All Loans├── Active Loans             /loans?status=active├── Overdue Loans            /loans?status=overdue├── Closed Loans             /loans?status=closed├── Auction Loans            /loans?status=auction└── New Loan                 /loans/new
+
+💳 Payments                     /payments
+
+📈 Reports                      /reports├── Collection Reports├── Outstanding Reports├── Customer Ledger└── Loan Ledger
+
+🧮 Calculator                   /calculator
+
+🔔 Notifications                /notifications
+
+⚙️ Settings                     /settings├── Company Profile          /settings/company├── Loan Defaults            /settings/loan-defaults├── Notifications            /settings/notifications├── Appearance               /settings/appearance├── Users (Admin)            /settings/users├── Audit Log                /settings/audit-log└── Backup & Restore         /settings/backup
+
+Role-Based Sidebar Visibility
+
+Menu Item
+
+Admin
+
+Manager
+
+Staff
+
+Dashboard
+
+✅ Full
+
+✅ Full
+
+✅ Limited metrics
+
+Customers
+
+✅ Full CRUD
+
+✅ Full CRUD
+
+✅ View + Add
+
+Loans
+
+✅ Full CRUD
+
+✅ Full CRUD
+
+✅ View + Add
+
+Payments
+
+✅ Full
+
+✅ Full
+
+✅ Add only
+
+Reports
+
+✅ All reports
+
+✅ Most reports
+
+❌ Hidden
+
+Calculator
+
+✅
+
+✅
+
+✅
+
+Notifications
+
+✅
+
+✅
+
+✅
+
+Settings > Users
+
+✅
+
+❌
+
+❌
+
+Settings > Audit Log
+
+✅
+
+✅
+
+❌
+
+Settings > Backup
+
+✅
+
+❌
+
+❌
+
+Settings (general)
+
+✅
+
+✅ Limited
+
+❌
+
+Sidebar Footer
+
+Logged-in user name, role badge, avatar
+
+Quick logout button
+
+User Flow
+
+Flow 1: First-Time Admin Setup
+
+Admin navigates to the web application URL and is redirected to /login
+
+Admin logs in with pre-configured credentials
+
+System redirects to /dashboard — dashboard shows empty states for all metrics
+
+Admin is prompted with a setup banner: "Complete your company profile to get started"
+
+Admin clicks the banner → navigates to /settings/company
+
+Admin uploads logo, fills in company name, address, phone, GST number, and saves
+
+Admin navigates to /settings/users and creates Manager and Staff user accounts, assigning roles and setting initial passwords
+
+Admin navigates to /settings/loan-defaults and configures default interest rates and penalty rate
+
+Admin navigates to /settings/notifications and enters SMS/WhatsApp/Email API credentials and sets reminder days
+
+Setup complete — Admin returns to /dashboard
+
+Flow 2: Adding a New Customer and Creating Their First Loan
+
+Staff member logs in → lands on /dashboard
+
+Staff clicks "New Loan" in sidebar or dashboard quick action
+
+System navigates to /loans/new → Step 1 (Customer Selection) displayed
+
+Staff types customer name in the search autocomplete — no result found
+
+Staff clicks "Create New Customer" shortcut link
+
+System opens /customers/new in a new tab (or inline modal)
+
+Staff fills in customer name, phone, WhatsApp number, Aadhaar number, PAN number, and address fields
+
+Staff uploads customer photo using webcam capture button — webcam modal opens, photo is captured and confirmed
+
+Staff uploads Aadhaar front and back images via file upload zones
+
+Staff clicks "Save Customer" → customer is saved, Customer ID auto-generated
+
+System returns to loan creation form (Step 1) with the new customer auto-selected
+
+Staff proceeds to Step 2 — Jewellery Details
+
+Staff fills in jewellery type (e.g., "Necklace"), category ("Ornament"), gross weight (25g), stone weight (2g) — net weight auto-calculated as 23g
+
+Staff selects purity: 22K Gold
+
+Staff enters estimated value (₹60,000) and market value (₹62,000)
+
+Staff uploads a jewellery photo
+
+Staff clicks "Add Another Item" to add a second jewellery row and fills in details for a bangle
+
+Staff clicks "Next" → proceeds to Step 3 — Loan Terms
+
+Staff enters principal amount (₹50,000)
+
+Staff sets interest rate: 2% per month, Simple Interest
+
+Staff sets loan duration: 6 months
+
+System instantly calculates and displays: Due Date (6 months from today), Total Interest (₹6,000), Total Payable (₹56,000)
+
+Staff sets penalty rate: 1% per month
+
+Staff clicks "Submit Loan"
+
+System saves loan, auto-generates Loan Number (e.g., GL-2024-00001)
+
+System redirects to /loans/ — Loan Detail screen
+
+Staff clicks "Print Loan Agreement" — receipt/agreement PDF opens in print view
+
+Flow 3: Recording a Payment and Printing a Receipt
+
+Staff navigates to /loans and searches for customer by name
+
+Staff clicks "View" on the relevant loan row → /loans/
+
+Staff reviews outstanding balance: ₹56,000 total payable, ₹50,000 principal remaining, ₹6,000 interest accrued
+
+Customer visits shop and pays ₹10,000 today
+
+Staff clicks "Record Payment" button
+
+Payment modal opens with outstanding balance displayed
+
+Staff enters ₹10,000 in "Amount Paid"
+
+System auto-splits: ₹6,000 to interest, ₹4,000 to principal — shows remaining principal ₹46,000
+
+Staff selects Payment Mode: Cash
+
+Staff clicks "Save & Print Receipt"
+
+System saves payment, auto-generates Receipt Number (e.g., RCP-2024-00001)
+
+Loan status remains "Active" (not yet fully paid)
+
+System navigates to /loans//receipts/
+
+Professional receipt displayed with company logo, customer details, jewellery summary, payment breakdown, QR code, and signature area
+
+Staff clicks "Print" → browser print dialog opens with receipt-only print styling
+
+Receipt printed and handed to customer
+
+Flow 4: Handling an Overdue Loan
+
+Admin logs in and sees the dashboard — Overdue Loans card shows 3 overdue accounts
+
+Admin clicks the Overdue Loans card → navigates to /loans?status=overdue
+
+Admin reviews overdue loan list with "Days Overdue" column highlighted in red
+
+Admin clicks "View" on a specific overdue loan → /loans/
+
+Loan Detail shows penalty interest accrued in addition to regular interest
+
+Admin clicks "Renew Loan" button → Loan Renewal modal opens
+
+Admin reviews current outstanding balance (principal + interest + penalty)
+
+Admin sets new loan terms: same interest rate, new 6-month duration
+
+Admin selects "Capitalize Outstanding Interest" option
+
+New due date auto-calculated and displayed
+
+Admin confirms renewal
+
+System saves renewal record, updates loan due date, adds entry to Renewal History
+
+Loan status updates back to "Active"
+
+System sends WhatsApp notification to customer with new due date
+
+Flow 5: Closing a Loan
+
+Customer comes to close their loan
+
+Staff searches for loan on /loans by loan number
+
+Staff opens loan detail at /loans/
+
+Staff clicks "Close Loan" → Close Loan modal opens
+
+Modal shows: Principal outstanding, total interest accrued, penalty (if any), total amount payable
+
+Staff consults Manager — Manager opens the modal and applies a ₹200 discount
+
+Final payable amount updated: original total minus discount
+
+Customer pays full final amount — Staff enters payment mode (Cash) and confirms
+
+Staff clicks "Confirm & Close Loan"
+
+System marks loan as "Closed", records final payment, releases jewellery in system
+
+System generates Closing Certificate PDF
+
+Staff prints closing certificate and hands jewellery back to customer
+
+Flow 6: Generating a Monthly Report
+
+Admin navigates to /reports from the sidebar
+
+Admin clicks "Monthly Collection Report"
+
+Admin sets date range: first to last day of previous month
+
+Admin applies filter: All loan types, All payment modes
+
+Admin clicks "Generate Report"
+
+System queries and displays: total collected, interest collected, principal collected, penalty collected, number of transactions, breakdown by payment mode
+
+Data table shows all payment records within the period
+
+Admin clicks "Export to Excel" → .xlsx file downloads automatically
+
+Admin clicks "Print" → print-optimized report view opens with company header
+
+Flow 7: Staff Daily Workflow
+
+Staff logs in → dashboard shows today's summary (today's collections, upcoming due dates)
+
+Staff checks the "Upcoming Due Dates" panel — 4 customers have loans due in the next 3 days
+
+Staff uses the notification center (/notifications) to review which SMS/WhatsApp reminders were sent overnight by the system
+
+First customer of the day arrives to make a payment — Staff records payment via loan detail page (Flow 3)
+
+New customer arrives — Staff creates customer profile and new loan (Flow 2)
+
+Staff uses the global search bar to quickly locate an existing customer by phone number
+
+Staff views customer profile, checks loan history, confirms details with customer
+
+End of day: Staff's Manager runs daily collection report for the day's transactions
