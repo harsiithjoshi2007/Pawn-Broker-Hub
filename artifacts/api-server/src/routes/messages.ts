@@ -27,23 +27,29 @@ async function sendTwilioMessage(
 ): Promise<void> {
   const connectors = new ReplitConnectors();
 
-  // Resolve Account SID from Twilio
-  const accountData = (await connectors.proxy("twilio", "/2010-04-01/Accounts.json")) as any;
-  const accountSid = accountData?.accounts?.[0]?.sid;
-  if (!accountSid) throw new Error("Could not retrieve Twilio Account SID.");
+  // Get Account SID from connector settings — avoids a redundant API round-trip.
+  // proxy() returns a Response object (like fetch), NOT parsed JSON.
+  const connections = await connectors.listConnections({ connector_names: "twilio" });
+  const accountSid = (connections[0] as any)?.settings?.account_sid as string | undefined;
+  if (!accountSid) throw new Error("Could not retrieve Twilio Account SID from connector settings.");
 
   const toNum   = useWhatsApp ? `whatsapp:${to}`         : to;
   const fromNum = useWhatsApp ? `whatsapp:${fromNumber}` : fromNumber;
 
-  await connectors.proxy(
+  const msgResponse = await connectors.proxy(
     "twilio",
     `/2010-04-01/Accounts/${accountSid}/Messages.json`,
     {
       method:  "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body:    new URLSearchParams({ To: toNum, From: fromNum, Body: body }).toString(),
+      body:    new URLSearchParams({ To: toNum, From: fromNum, Body: body }),
     },
-  );
+  ) as Response;
+
+  if (!msgResponse.ok) {
+    const errData = await msgResponse.json().catch(() => ({})) as any;
+    throw new Error(errData?.message ?? `Twilio error ${msgResponse.status}`);
+  }
 }
 
 function buildReminderMessage(
