@@ -388,8 +388,21 @@ export default function Settings() {
                   placeholder="+1XXXXXXXXXX"
                   className="font-mono"
                 />
+                {/* Warn if it looks like a personal Indian mobile instead of a Twilio number */}
+                {shopForm.twilioFromNumber && /^\+91\d{10}$/.test(shopForm.twilioFromNumber.replace(/\s/g, "")) && (
+                  <div className="flex gap-2 rounded-md border border-yellow-400/50 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-300">
+                    <span className="shrink-0">⚠️</span>
+                    <span>
+                      This looks like a personal Indian mobile number. The <strong>From</strong> number must be a
+                      Twilio-purchased number (shown in{" "}
+                      <strong>Twilio Console → Phone Numbers → Manage → Active Numbers</strong>), not your own number.
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Your Twilio-registered number for SMS. For WhatsApp, enroll it in Twilio's WhatsApp service.
+                  This is your <strong>Twilio-assigned</strong> phone number — find it in{" "}
+                  <strong>Twilio Console → Phone Numbers → Manage → Active Numbers</strong>.
+                  It is <em>not</em> your personal number.
                 </p>
               </div>
               <div className="flex items-center gap-3 py-1">
