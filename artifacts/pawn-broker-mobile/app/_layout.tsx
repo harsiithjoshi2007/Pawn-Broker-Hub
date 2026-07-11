@@ -1,9 +1,16 @@
 import React, { useEffect, useRef } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import {
+  PersistQueryClientProvider,
+  removeOldestQuery,
+} from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { NetworkBanner } from '@/components/NetworkBanner';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -17,12 +24,17 @@ import * as Notifications from 'expo-notifications';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider } from '@/context/auth';
 import { Platform } from 'react-native';
+import { configureOnlineManager } from '@/lib/onlineManager';
 
 // Set the API base URL at module level — must be called outside any component
 // so it runs exactly once before any queries fire.
 if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 }
+
+// Wire React Query's online state to the device's real network connectivity.
+// Must happen before any queries are created.
+configureOnlineManager();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -31,9 +43,31 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      // gcTime must be >= the persister's maxAge so cached data survives
+      // between app launches.
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      retry: 2,
+      // Keep showing cached data while a refetch is in flight.
+      placeholderData: (prev: unknown) => prev,
+      // When offline, return cached data immediately and pause the network
+      // request until connectivity returns.
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      // Retry failed mutations automatically when the device comes back online.
+      networkMode: 'offlineFirst',
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
     },
   },
+});
+
+// Persist the query cache to AsyncStorage so data survives app restarts.
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'PAWN_BROKER_QUERY_CACHE',
+  // If the serialized cache is too large, drop the oldest queries.
+  retry: removeOldestQuery,
 });
 
 function RootLayoutNav() {
@@ -99,15 +133,25 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: asyncStoragePersister,
+            // Cache survives for 24 hours between launches.
+            maxAge: 1000 * 60 * 60 * 24,
+            // Bust the persisted cache if queries change shape.
+            buster: 'v1',
+          }}
+        >
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
                 <RootLayoutNav />
+                <NetworkBanner />
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

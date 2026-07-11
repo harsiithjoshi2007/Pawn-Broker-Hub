@@ -627,6 +627,15 @@ importers:
 
   artifacts/pawn-broker-mobile:
     dependencies:
+      '@react-native-community/netinfo':
+        specifier: ^11.4.1
+        version: 11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
+      '@tanstack/query-async-storage-persister':
+        specifier: ^5.101.2
+        version: 5.101.2
+      '@tanstack/react-query-persist-client':
+        specifier: ^5.101.2
+        version: 5.101.2(@tanstack/react-query@5.101.2(react@19.1.0))(react@19.1.0)
       expo-local-authentication:
         specifier: ~17.0.8
         version: 17.0.8(expo@54.0.35)
@@ -2317,6 +2326,11 @@ packages:
     peerDependencies:
       react-native: ^0.0.0-0 || >=0.65 <1.0
 
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
+    peerDependencies:
+      react-native: '>=0.59'
+
   '@react-native/assets-registry@0.81.5':
     resolution: {integrity: sha512-705B6x/5Kxm1RKRvSv0ADYWm5JOnoiQ1ufW7h8uu2E6G9Of/eE6hP/Ivw3U5jI16ERqZxiKQwk34VJbB0niX9w==}
     engines: {node: '>= 20.19.4'}
@@ -2553,8 +2567,20 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
+  '@tanstack/query-async-storage-persister@5.101.2':
+    resolution: {integrity: sha512-jf7zvVKZ5q2j/xuhbTIBUpw5xt6cw/ioOFQquxK7fRY0AmMQP8A0JVMOgYoeQLA4PKdeT7RxsuLAF0Lft9oJ8Q==}
+
   '@tanstack/query-core@5.101.2':
     resolution: {integrity: sha512-hH5MLoJhF7KaIGd7q3xTXGXvslI+GYlM1Z/35aSHHWaCJWB7XvTSHYuV3eM7tw+aE0mT/xMro4M4Q9rCGHT0lw==}
+
+  '@tanstack/query-persist-client-core@5.101.2':
+    resolution: {integrity: sha512-rgMsbvBVpSPDUsprC9FYxojdG0Q1LH6yq1i3DXz2aps4VEqv2l4Msj3YDqIifU3xkl/DrYe9YWntZAJLrM6xTg==}
+
+  '@tanstack/react-query-persist-client@5.101.2':
+    resolution: {integrity: sha512-19UpaRtf0lvB2QAJ2MoixxtGf3osMOd508g99EsttUj4+3eLs+ulnNgYjB7AkQMHrRlcbVXqpVNqWkB4a7g8Zw==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.101.2
+      react: ^18 || ^19
 
   '@tanstack/react-query@5.101.2':
     resolution: {integrity: sha512-seDkr6kzGzX1okaaTtZPtgA688CDPlXUz1C6xSg0ESqn04Vuc8tlrYms1s3de+znBqhPVxFRfpAfUf+6XvfPWg==}
@@ -8392,6 +8418,10 @@ snapshots:
       merge-options: 3.0.4
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
 
+  '@react-native-community/netinfo@11.4.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))':
+    dependencies:
+      react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+
   '@react-native/assets-registry@0.81.5': {}
 
   '@react-native/babel-plugin-codegen@0.81.5(@babel/core@7.29.7)':
@@ -8706,7 +8736,22 @@ snapshots:
       tailwindcss: 4.3.2
       vite: 7.3.6(@types/node@25.9.4)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.0)(tsx@4.23.0)(yaml@2.9.0)
 
+  '@tanstack/query-async-storage-persister@5.101.2':
+    dependencies:
+      '@tanstack/query-core': 5.101.2
+      '@tanstack/query-persist-client-core': 5.101.2
+
   '@tanstack/query-core@5.101.2': {}
+
+  '@tanstack/query-persist-client-core@5.101.2':
+    dependencies:
+      '@tanstack/query-core': 5.101.2
+
+  '@tanstack/react-query-persist-client@5.101.2(@tanstack/react-query@5.101.2(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-persist-client-core': 5.101.2
+      '@tanstack/react-query': 5.101.2(react@19.1.0)
+      react: 19.1.0
 
   '@tanstack/react-query@5.101.2(react@19.1.0)':
     dependencies:

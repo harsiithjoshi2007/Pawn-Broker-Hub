@@ -56,6 +56,9 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@react-native-community/netinfo": "^11.4.1",
+    "@tanstack/query-async-storage-persister": "^5.101.2",
+    "@tanstack/react-query-persist-client": "^5.101.2",
     "expo-local-authentication": "~17.0.8",
     "expo-notifications": "~0.32.17",
     "expo-secure-store": "^15.0.8"
