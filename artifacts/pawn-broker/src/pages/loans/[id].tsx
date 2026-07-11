@@ -155,7 +155,7 @@ export default function LoanDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2 md:ml-auto">
-          <Button variant="outline" className="print:hidden bg-background">
+          <Button variant="outline" className="print:hidden bg-background" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" /> Print Receipt
           </Button>
           

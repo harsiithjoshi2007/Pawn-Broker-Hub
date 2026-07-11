@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { paymentsTable, loansTable, customersTable } from "@workspace/db";
-import { sql, eq, and, gte, lte } from "drizzle-orm";
+import { paymentsTable, loansTable } from "@workspace/db";
+import { sql, eq, and, getTableColumns } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -22,6 +22,8 @@ router.get("/reports/collection", requireAuth, async (req, res) => {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const paymentCols = getTableColumns(paymentsTable);
+
     const [summary, payments] = await Promise.all([
       db.select({
         totalCollected: sql<number>`coalesce(sum(amount), 0)`,
@@ -29,7 +31,12 @@ router.get("/reports/collection", requireAuth, async (req, res) => {
         totalPrincipal: sql<number>`coalesce(sum(principal_paid), 0)`,
         count: sql<number>`count(*)`,
       }).from(paymentsTable).where(where),
-      db.select().from(paymentsTable).where(where).limit(200),
+      db.select({ ...paymentCols, loanNumber: loansTable.loanNumber })
+        .from(paymentsTable)
+        .leftJoin(loansTable, eq(paymentsTable.loanId, loansTable.id))
+        .where(where)
+        .orderBy(sql`${paymentsTable.paymentDate} desc`)
+        .limit(500),
     ]);
 
     return res.json({

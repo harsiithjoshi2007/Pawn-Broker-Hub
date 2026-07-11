@@ -35,6 +35,36 @@ export default function Reports() {
     setActiveParams({ from: fromDate, to: toDate, loanType });
   };
 
+  const handleExportCSV = () => {
+    if (!report || report.payments.length === 0) return;
+    const headers = ['Date', 'Receipt No.', 'Loan No.', 'Mode', 'Interest (INR)', 'Principal (INR)', 'Total Amount (INR)'];
+    const rows = report.payments.map((p: any) => [
+      p.paymentDate,
+      p.receiptNumber,
+      p.loanNumber || `#${p.loanId}`,
+      p.paymentMode.replace('_', ' ').toUpperCase(),
+      p.interestPaid,
+      p.principalPaid,
+      p.amount,
+    ]);
+    const csv = [headers, ...rows]
+      .map(row => row.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `collection-report-${activeParams.from}-to-${activeParams.to}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -43,10 +73,10 @@ export default function Reports() {
           <p className="text-muted-foreground mt-1">Generate reports on cash flow and payments.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" disabled={!report || report.payments.length === 0} className="bg-background">
+          <Button variant="outline" disabled={!report || report.payments.length === 0} className="bg-background print:hidden" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Button variant="outline" disabled={!report || report.payments.length === 0} className="bg-background">
+          <Button variant="outline" disabled={!report || report.payments.length === 0} className="bg-background print:hidden" onClick={handleExportPDF}>
             <FileBarChart className="mr-2 h-4 w-4" /> Export PDF
           </Button>
         </div>
@@ -151,7 +181,7 @@ export default function Reports() {
                         <TableRow key={payment.id} className="hover:bg-muted/20">
                           <TableCell className="pl-6 text-sm">{formatIndianDate(payment.paymentDate)}</TableCell>
                           <TableCell className="font-mono text-xs text-muted-foreground">{payment.receiptNumber}</TableCell>
-                          <TableCell className="font-mono text-xs">{payment.loanId}</TableCell>
+                          <TableCell className="font-mono text-xs">{(payment as any).loanNumber || `#${payment.loanId}`}</TableCell>
                           <TableCell>
                             <span className="uppercase text-[10px] font-medium px-2 py-0.5 bg-muted rounded border border-border">
                               {payment.paymentMode.replace('_', ' ')}

@@ -139,7 +139,7 @@ export default function Calculator() {
           </Card>
 
           <Button asChild variant="outline" className="w-full h-12 border-dashed border-2">
-            <Link href="/loans/new">
+            <Link href={`/loans/new?principal=${principal}&rate=${rate}&ratePeriod=${ratePeriod}&interestType=${interestType}&duration=${duration}&durationUnit=${durationUnit}`}>
               Use these terms for a new loan <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

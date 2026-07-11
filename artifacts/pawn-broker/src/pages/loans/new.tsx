@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useListCustomers, useCreateLoan, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
+import { useListCustomers, useCreateLoan, useGetCustomer, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -45,14 +45,34 @@ const loanSchema = z.object({
 
 type LoanFormValues = z.infer<typeof loanSchema>;
 
+function parseUrlParams() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    customerId: p.get('customerId') ? parseInt(p.get('customerId')!) : null,
+    principal: p.get('principal') ? parseFloat(p.get('principal')!) : null,
+    rate: p.get('rate') ? parseFloat(p.get('rate')!) : null,
+    ratePeriod: p.get('ratePeriod') || null,
+    interestType: p.get('interestType') || null,
+    duration: p.get('duration') ? parseInt(p.get('duration')!) : null,
+    durationUnit: p.get('durationUnit') || null,
+  };
+}
+
 export default function NewLoan() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  const [step, setStep] = useState(1);
+
+  const urlParams = parseUrlParams();
+
+  const [step, setStep] = useState(urlParams.customerId ? 2 : 1);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+
+  // Auto-load customer from URL param (e.g. coming from customer detail page)
+  const { data: urlCustomer } = useGetCustomer(urlParams.customerId ?? 0, {
+    query: { enabled: !!urlParams.customerId }
+  } as any);
 
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomers(
     { search: customerSearch, limit: 5 },
@@ -65,14 +85,14 @@ export default function NewLoan() {
   const form = useForm<LoanFormValues>({
     resolver: zodResolver(loanSchema),
     defaultValues: {
-      customerId: 0,
+      customerId: urlParams.customerId ?? 0,
       loanType: "gold",
-      principalAmount: 0,
-      interestRate: 2,
-      ratePeriod: "month",
-      interestType: "simple",
-      duration: 6,
-      durationUnit: "months",
+      principalAmount: urlParams.principal ?? 0,
+      interestRate: urlParams.rate ?? 2,
+      ratePeriod: (urlParams.ratePeriod as any) ?? "month",
+      interestType: (urlParams.interestType as any) ?? "simple",
+      duration: urlParams.duration ?? 6,
+      durationUnit: (urlParams.durationUnit as any) ?? "months",
       penaltyRate: 0,
       notes: "",
       jewelleryItems: [
@@ -88,6 +108,13 @@ export default function NewLoan() {
       ],
     },
   });
+
+  // Set selected customer once URL customer data loads (e.g. "New Loan" from customer detail page)
+  useEffect(() => {
+    if (urlCustomer && !selectedCustomer) {
+      setSelectedCustomer(urlCustomer);
+    }
+  }, [urlCustomer]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
