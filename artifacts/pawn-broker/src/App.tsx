@@ -6,6 +6,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/lib/auth';
 import { AppLayout } from '@/components/layout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
@@ -43,22 +44,24 @@ function Router() {
       </Route>
       <Route path="/:rest*">
         <AppLayout>
-          <Switch>
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/customers" component={Customers} />
-            <Route path="/customers/new" component={NewCustomer} />
-            <Route path="/customers/:id" component={CustomerDetail} />
-            <Route path="/customers/:id/edit" component={EditCustomer} />
-            <Route path="/loans" component={Loans} />
-            <Route path="/loans/new" component={NewLoan} />
-            <Route path="/loans/:id" component={LoanDetail} />
-            <Route path="/payments" component={Payments} />
-            <Route path="/calculator" component={Calculator} />
-            <Route path="/reports" component={Reports} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/notifications" component={Notifications} />
-            <Route component={NotFound} />
-          </Switch>
+          <ErrorBoundary>
+            <Switch>
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/customers/new" component={NewCustomer} />
+              <Route path="/customers/:id/edit" component={EditCustomer} />
+              <Route path="/customers/:id" component={CustomerDetail} />
+              <Route path="/customers" component={Customers} />
+              <Route path="/loans/new" component={NewLoan} />
+              <Route path="/loans/:id" component={LoanDetail} />
+              <Route path="/loans" component={Loans} />
+              <Route path="/payments" component={Payments} />
+              <Route path="/calculator" component={Calculator} />
+              <Route path="/reports" component={Reports} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/notifications" component={Notifications} />
+              <Route component={NotFound} />
+            </Switch>
+          </ErrorBoundary>
         </AppLayout>
       </Route>
     </Switch>
