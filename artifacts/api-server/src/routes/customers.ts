@@ -9,8 +9,8 @@ const router = Router();
 // Generate customer ID
 async function generateCustomerId(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await db.select({ count: sql<number>`count(*)` }).from(customersTable);
-  const seq = (Number(count[0].count) + 1).toString().padStart(5, "0");
+  const maxResult = await db.select({ maxId: sql<number>`COALESCE(MAX(id), 0)` }).from(customersTable);
+  const seq = (Number(maxResult[0].maxId) + 1).toString().padStart(5, "0");
   return `CUS-${year}-${seq}`;
 }
 

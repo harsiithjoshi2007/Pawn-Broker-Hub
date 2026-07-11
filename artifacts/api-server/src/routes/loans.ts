@@ -15,8 +15,8 @@ function generateLoanNumber(loanType: string, seq: number): string {
 
 async function generateReceiptNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await db.select({ count: sql<number>`count(*)` }).from(paymentsTable);
-  const seq = (Number(count[0].count) + 1).toString().padStart(5, "0");
+  const maxResult = await db.select({ maxId: sql<number>`COALESCE(MAX(id), 0)` }).from(paymentsTable);
+  const seq = (Number(maxResult[0].maxId) + 1).toString().padStart(5, "0");
   return `RCP-${year}-${seq}`;
 }
 
@@ -119,8 +119,8 @@ router.post("/loans", requireAuth, async (req, res) => {
       penaltyRate, notes, jewelleryItems = []
     } = req.body;
 
-    const count = await db.select({ count: sql<number>`count(*)` }).from(loansTable);
-    const seq = Number(count[0].count) + 1;
+    const maxResult = await db.select({ maxId: sql<number>`COALESCE(MAX(id), 0)` }).from(loansTable);
+    const seq = Number(maxResult[0].maxId) + 1;
     const loanNumber = generateLoanNumber(loanType, seq);
 
     const startDate = new Date();
