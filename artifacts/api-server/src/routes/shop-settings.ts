@@ -19,6 +19,7 @@ router.get("/shop-settings", requireAuth, async (req, res) => {
         twilioAuthToken: null,
         twilioFromNumber: null,
         twilioWhatsappEnabled: false,
+        fast2smsApiKey: null,
       });
     }
     return res.json(rows[0]);
@@ -39,6 +40,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
       twilioAuthToken,
       twilioFromNumber,
       twilioWhatsappEnabled,
+      fast2smsApiKey,
     } = req.body;
 
     const existing = await db.select().from(shopSettingsTable).limit(1);
@@ -54,6 +56,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
           ...(twilioAuthToken       !== undefined && { twilioAuthToken:       twilioAuthToken || null }),
           ...(twilioFromNumber      !== undefined && { twilioFromNumber:      twilioFromNumber || null }),
           ...(twilioWhatsappEnabled !== undefined && { twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled) }),
+          ...(fast2smsApiKey       !== undefined && { fast2smsApiKey:       fast2smsApiKey || null }),
           updatedAt: new Date(),
         })
         .where(eq(shopSettingsTable.id, existing[0].id))
@@ -71,6 +74,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
         twilioAuthToken:       twilioAuthToken  || null,
         twilioFromNumber:      twilioFromNumber || null,
         twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled),
+        fast2smsApiKey:        fast2smsApiKey  || null,
       })
       .returning();
     return res.json(created);

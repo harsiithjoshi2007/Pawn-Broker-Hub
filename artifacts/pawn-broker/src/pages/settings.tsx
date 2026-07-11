@@ -16,6 +16,7 @@ interface ShopSettingsForm {
   shopName: string;
   shopPhone: string;
   shopAddress: string;
+  fast2smsApiKey: string;
   twilioAccountSid: string;
   twilioAuthToken: string;
   twilioFromNumber: string;
@@ -33,7 +34,7 @@ export default function Settings() {
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [isSavingShop, setIsSavingShop] = useState(false);
   const [shopForm, setShopForm] = useState<ShopSettingsForm>({
-    shopName: "", shopPhone: "", shopAddress: "", twilioAccountSid: "", twilioAuthToken: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
+    shopName: "", shopPhone: "", shopAddress: "", fast2smsApiKey: "", twilioAccountSid: "", twilioAuthToken: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
   });
 
   useEffect(() => {
@@ -48,10 +49,11 @@ export default function Settings() {
       shopName:              shopSettings?.shopName                   || "",
       shopPhone:             shopSettings?.shopPhone                  || "",
       shopAddress:           shopSettings?.shopAddress                || "",
-      twilioAccountSid:      (shopSettings as any)?.twilioAccountSid || "",
-      twilioAuthToken:       (shopSettings as any)?.twilioAuthToken   || "",
-      twilioFromNumber:      shopSettings?.twilioFromNumber           || "",
-      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled      || false,
+      fast2smsApiKey:        (shopSettings as any)?.fast2smsApiKey    || "",
+      twilioAccountSid:      (shopSettings as any)?.twilioAccountSid  || "",
+      twilioAuthToken:       (shopSettings as any)?.twilioAuthToken    || "",
+      twilioFromNumber:      shopSettings?.twilioFromNumber            || "",
+      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled       || false,
     });
     setIsEditingShop(true);
   };
@@ -352,8 +354,30 @@ export default function Settings() {
                 </div>
               </div>
               <Separator />
+              {/* ── Fast2SMS ─────────────────────────────────────────────── */}
+              <div className="rounded-md border border-green-400/40 bg-green-50/50 dark:bg-green-900/10 px-4 py-3 space-y-3">
+                <p className="text-xs font-semibold text-green-800 dark:text-green-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> Fast2SMS — Recommended for India
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Send SMS to <strong>any Indian number</strong> — no per-number verification, no Twilio trial restrictions.
+                  Sign up free at <strong>fast2sms.com</strong> → Dashboard → Dev API → copy your API key.
+                  If this key is set, Fast2SMS is used automatically; Twilio is only a fallback.
+                </p>
+                <div className="space-y-2">
+                  <Label>Fast2SMS API Key</Label>
+                  <Input
+                    value={shopForm.fast2smsApiKey}
+                    onChange={e => setShopForm(f => ({ ...f, fast2smsApiKey: e.target.value }))}
+                    placeholder="Paste your Fast2SMS API key here"
+                    type="password"
+                    className="font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <Separator />
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" /> Twilio Messaging
+                <MessageSquare className="h-3.5 w-3.5" /> Twilio (optional — for WhatsApp or international SMS)
               </p>
               <div className="space-y-2">
                 <Label>Twilio Account SID <span className="text-destructive">*</span></Label>
@@ -446,6 +470,17 @@ export default function Settings() {
               <div className="col-span-2">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Address</Label>
                 <p className="mt-1 font-medium">{shopSettings?.shopAddress || "—"}</p>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1">
+                  Fast2SMS API Key
+                  {(shopSettings as any)?.fast2smsApiKey && (
+                    <span className="ml-1 rounded-full bg-green-500 text-white text-[10px] px-1.5 py-0.5 font-bold uppercase tracking-wider">Active</span>
+                  )}
+                </Label>
+                <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.fast2smsApiKey ? "text-muted-foreground italic" : ""}`}>
+                  {(shopSettings as any)?.fast2smsApiKey ? "••••••••••••••••••••••••" : "Not configured — SMS will use Twilio"}
+                </p>
               </div>
               <div>
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Account SID</Label>

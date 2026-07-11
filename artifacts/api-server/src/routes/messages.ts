@@ -15,18 +15,52 @@ async function getShopSettings() {
     shopPhone: null,
     shopAddress: null,
     twilioAccountSid: null,
+    twilioAuthToken: null,
     twilioFromNumber: null,
     twilioWhatsappEnabled: false,
+    fast2smsApiKey: null,
   };
 }
 
 /** Normalise a phone number to E.164. Assumes India (+91) if no country code. */
 function toE164(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (phone.startsWith("+")) return phone.trim();          // already E.164
-  if (digits.length === 10) return `+91${digits}`;         // Indian 10-digit
+  if (phone.startsWith("+")) return phone.trim();
+  if (digits.length === 10) return `+91${digits}`;
   if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  return `+${digits}`;                                     // best-effort
+  return `+${digits}`;
+}
+
+/** Strip to 10-digit Indian number for Fast2SMS (removes +91 / 91 prefix). */
+function toFast2SMSNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  if (digits.length === 10) return digits;
+  return digits.slice(-10); // best-effort
+}
+
+/** Send SMS via Fast2SMS — works to any Indian number, no verification required. */
+async function sendFast2SMS(to: string, body: string, apiKey: string): Promise<void> {
+  const number = toFast2SMSNumber(to);
+  const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+    method: "POST",
+    headers: {
+      "authorization": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      route: "q",          // Quick SMS — no DLT template registration required
+      message: body,
+      language: "english",
+      flash: 0,
+      numbers: number,
+    }),
+  });
+  const data = await response.json().catch(() => ({})) as any;
+  if (!data?.return) {
+    const msg = Array.isArray(data?.message) ? data.message[0] : (data?.message ?? "Fast2SMS error");
+    throw new Error(msg);
+  }
 }
 
 async function sendTwilioMessage(
@@ -104,14 +138,16 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
     const useWhatsApp = req.body.channel === "whatsapp";
 
     const settings = await getShopSettings();
-    if (!settings.twilioAccountSid) {
-      return res.status(400).json({ error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging." });
+    const useFast2SMS = !!(settings as any).fast2smsApiKey;
+
+    // Validate credentials for whichever provider is active
+    if (useFast2SMS && useWhatsApp) {
+      return res.status(400).json({ error: "Fast2SMS does not support WhatsApp. Switch to SMS channel." });
     }
-    if (!(settings as any).twilioAuthToken) {
-      return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
-    }
-    if (!settings.twilioFromNumber) {
-      return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
+    if (!useFast2SMS) {
+      if (!settings.twilioAccountSid)         return res.status(400).json({ error: "No SMS provider configured. Add a Fast2SMS API key or Twilio credentials in Settings → Shop & Messaging." });
+      if (!(settings as any).twilioAuthToken) return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
+      if (!settings.twilioFromNumber)         return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
     }
 
     const rows = await db
@@ -140,8 +176,12 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
       loan.dueDate,
     );
 
-    await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
-    return res.json({ success: true, to: toNumber, channel: useWhatsApp ? "whatsapp" : "sms" });
+    if (useFast2SMS) {
+      await sendFast2SMS(toNumber, message, (settings as any).fast2smsApiKey!);
+    } else {
+      await sendTwilioMessage(toNumber, message, settings.twilioFromNumber!, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
+    }
+    return res.json({ success: true, to: toNumber, channel: useWhatsApp ? "whatsapp" : "sms", provider: useFast2SMS ? "fast2sms" : "twilio" });
   } catch (err: any) {
     req.log.error({ err }, "Send single reminder error");
     return res.status(500).json({ error: err?.message ?? "Failed to send message." });
@@ -154,14 +194,15 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
     const useWhatsApp = req.body.channel === "whatsapp";
 
     const settings = await getShopSettings();
-    if (!settings.twilioAccountSid) {
-      return res.status(400).json({ error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging." });
+    const useFast2SMS = !!(settings as any).fast2smsApiKey;
+
+    if (useFast2SMS && useWhatsApp) {
+      return res.status(400).json({ error: "Fast2SMS does not support WhatsApp. Switch to SMS channel." });
     }
-    if (!(settings as any).twilioAuthToken) {
-      return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
-    }
-    if (!settings.twilioFromNumber) {
-      return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
+    if (!useFast2SMS) {
+      if (!settings.twilioAccountSid)         return res.status(400).json({ error: "No SMS provider configured. Add a Fast2SMS API key or Twilio credentials in Settings → Shop & Messaging." });
+      if (!(settings as any).twilioAuthToken) return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
+      if (!settings.twilioFromNumber)         return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
     }
 
     const overdueRows = await db
@@ -193,7 +234,11 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
           loan.principalAmount, loan.outstandingBalance,
           loan.dueDate,
         );
-        await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
+        if (useFast2SMS) {
+          await sendFast2SMS(toNumber, message, (settings as any).fast2smsApiKey!);
+        } else {
+          await sendTwilioMessage(toNumber, message, settings.twilioFromNumber!, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
+        }
         sent++;
         results.push({ loanId: loan.id, loanNumber: loan.loanNumber, customerName, status: "sent", to: toNumber });
       } catch (e: any) {

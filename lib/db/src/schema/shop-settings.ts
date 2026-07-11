@@ -9,6 +9,7 @@ export const shopSettingsTable = pgTable("shop_settings", {
   twilioAuthToken: text("twilio_auth_token"),
   twilioFromNumber: text("twilio_from_number"),
   twilioWhatsappEnabled: boolean("twilio_whatsapp_enabled").notNull().default(false),
+  fast2smsApiKey: text("fast2sms_api_key"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
