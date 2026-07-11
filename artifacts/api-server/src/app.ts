@@ -63,9 +63,14 @@ function buildAllowedOrigins(): string[] {
   }
   // Development fallback: Replit proxied origins
   const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  const expoDevDomain = process.env.REPLIT_EXPO_DEV_DOMAIN;
   const origins: string[] = ["http://localhost:3000", "http://localhost:5173"];
   if (replitDevDomain) {
     origins.push(`https://${replitDevDomain}`);
+  }
+  // Allow the Expo web preview domain so mobile app's web build can reach the API
+  if (expoDevDomain) {
+    origins.push(`https://${expoDevDomain}`);
   }
   return origins;
 }
