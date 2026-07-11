@@ -177,6 +177,14 @@ export default function CustomerDetail() {
                     <p className="font-medium mt-1">{formatIndianDate(customer.dateOfBirth)}</p>
                   </div>
                   <div>
+                    <p className="text-muted-foreground">Relation</p>
+                    <p className="font-medium mt-1">
+                      {(customer as any).relationType && (customer as any).relativeName
+                        ? `${(customer as any).relationType} ${(customer as any).relativeName}`
+                        : (customer as any).relationType || (customer as any).relativeName || "—"}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-muted-foreground">Added On</p>
                     <p className="font-medium mt-1">{formatIndianDate(customer.createdAt)}</p>
                   </div>

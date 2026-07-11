@@ -7,6 +7,8 @@ export const customersTable = pgTable("customers", {
   customerId: text("customer_id").notNull().unique(),
   name: text("name").notNull(),
   dateOfBirth: text("date_of_birth"),
+  relationType: text("relation_type"),  // S/o | W/o | D/o | H/o | C/o
+  relativeName: text("relative_name"),
   phone: text("phone").notNull(),
   whatsapp: text("whatsapp"),
   email: text("email"),

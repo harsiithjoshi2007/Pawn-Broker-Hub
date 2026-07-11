@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,13 +8,71 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Shield, Loader2, CheckCircle2, Mail, Pencil, X, Save } from "lucide-react";
+import { User, Lock, Shield, Loader2, CheckCircle2, Mail, Pencil, X, Save, Building2, MessageSquare } from "lucide-react";
+
+interface ShopSettingsForm {
+  shopName: string;
+  shopPhone: string;
+  shopAddress: string;
+  twilioFromNumber: string;
+  twilioWhatsappEnabled: boolean;
+}
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // --- Shop Settings State ---
+  const [shopSettings, setShopSettings] = useState<ShopSettingsForm | null>(null);
+  const [isLoadingShop, setIsLoadingShop] = useState(true);
+  const [isEditingShop, setIsEditingShop] = useState(false);
+  const [isSavingShop, setIsSavingShop] = useState(false);
+  const [shopForm, setShopForm] = useState<ShopSettingsForm>({
+    shopName: "", shopPhone: "", shopAddress: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
+  });
+
+  useEffect(() => {
+    fetch("/api/shop-settings", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => { setShopSettings(d); setIsLoadingShop(false); })
+      .catch(() => setIsLoadingShop(false));
+  }, []);
+
+  const startEditShop = () => {
+    setShopForm({
+      shopName:              shopSettings?.shopName              || "",
+      shopPhone:             shopSettings?.shopPhone             || "",
+      shopAddress:           shopSettings?.shopAddress           || "",
+      twilioFromNumber:      shopSettings?.twilioFromNumber      || "",
+      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled || false,
+    });
+    setIsEditingShop(true);
+  };
+
+  const handleSaveShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingShop(true);
+    try {
+      const res = await fetch("/api/shop-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(shopForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      setShopSettings(data);
+      setIsEditingShop(false);
+      toast({ title: "Shop Settings Saved", description: "Configuration updated successfully." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally {
+      setIsSavingShop(false);
+    }
+  };
 
   // --- Profile Edit State ---
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -227,6 +285,135 @@ export default function Settings() {
               <div>
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Role</Label>
                 <p className="mt-1 font-medium">{roleLabel[user?.role ?? "staff"]}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Shop & Messaging */}
+      <Card className="shadow-sm border-border/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5 text-sidebar-primary" />
+              Shop & Messaging
+            </CardTitle>
+            {!isEditingShop && !isLoadingShop && (
+              <Button variant="outline" size="sm" onClick={startEditShop} className="h-8 gap-1.5">
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+            )}
+          </div>
+          <CardDescription>
+            Shop info included in reminder messages. Configure your Twilio number to send SMS/WhatsApp alerts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingShop ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-3/4" />
+            </div>
+          ) : isEditingShop ? (
+            <form onSubmit={handleSaveShop} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Shop Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={shopForm.shopName}
+                    onChange={e => setShopForm(f => ({ ...f, shopName: e.target.value }))}
+                    placeholder="e.g. GoldVault Pawn Broker"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shop Phone</Label>
+                  <Input
+                    value={shopForm.shopPhone}
+                    onChange={e => setShopForm(f => ({ ...f, shopPhone: e.target.value }))}
+                    placeholder="+91XXXXXXXXXX"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shop Address</Label>
+                  <Input
+                    value={shopForm.shopAddress}
+                    onChange={e => setShopForm(f => ({ ...f, shopAddress: e.target.value }))}
+                    placeholder="Full shop address"
+                  />
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-sidebar-primary" />
+                  Twilio Sender Number
+                </Label>
+                <Input
+                  value={shopForm.twilioFromNumber}
+                  onChange={e => setShopForm(f => ({ ...f, twilioFromNumber: e.target.value }))}
+                  placeholder="+1XXXXXXXXXX"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your Twilio-registered number for sending SMS. For WhatsApp, this number must be enrolled in Twilio's WhatsApp service.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="whatsapp-toggle"
+                  checked={shopForm.twilioWhatsappEnabled}
+                  onChange={e => setShopForm(f => ({ ...f, twilioWhatsappEnabled: e.target.checked }))}
+                  className="h-4 w-4 accent-sidebar-primary cursor-pointer"
+                />
+                <Label htmlFor="whatsapp-toggle" className="cursor-pointer font-normal">
+                  Enable WhatsApp reminders{" "}
+                  <span className="text-xs text-muted-foreground">(sends with whatsapp: prefix on the same number)</span>
+                </Label>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="submit"
+                  className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
+                  disabled={isSavingShop}
+                >
+                  {isSavingShop
+                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</>
+                    : <><Save className="h-4 w-4 mr-2" /> Save Settings</>}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsEditingShop(false)} disabled={isSavingShop}>
+                  <X className="h-4 w-4 mr-2" /> Cancel
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid grid-cols-2 gap-y-4 text-sm">
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Shop Name</Label>
+                <p className="mt-1 font-medium">{shopSettings?.shopName || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Shop Phone</Label>
+                <p className="mt-1 font-medium">{shopSettings?.shopPhone || "—"}</p>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Address</Label>
+                <p className="mt-1 font-medium">{shopSettings?.shopAddress || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio SMS Number</Label>
+                <p className={`mt-1 font-mono font-medium ${!shopSettings?.twilioFromNumber ? "text-muted-foreground italic" : ""}`}>
+                  {shopSettings?.twilioFromNumber || "Not configured"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">WhatsApp</Label>
+                <p className="mt-1 font-medium">{shopSettings?.twilioWhatsappEnabled ? "✓ Enabled" : "Disabled"}</p>
               </div>
             </div>
           )}

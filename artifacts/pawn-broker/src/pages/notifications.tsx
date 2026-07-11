@@ -1,30 +1,73 @@
+import { useState } from "react";
 import { useListLoans, useListPayments } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
-import { AlertCircle, CreditCard, FileText, Bell, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CreditCard, FileText, Bell, CheckCircle2, MessageSquare, Loader2, Send } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Notifications() {
-  const { data: overdueLoans, isLoading: loadingOverdue } = useListLoans({
-    status: "overdue",
-    limit: 20,
-  });
+  const { toast } = useToast();
+  const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
+  const [sendingIds, setSendingIds] = useState<Set<number>>(new Set());
+  const [sendingAll, setSendingAll] = useState(false);
 
-  const { data: recentPayments, isLoading: loadingPayments } = useListPayments({
-    limit: 10,
-  });
-
-  const { data: recentLoans, isLoading: loadingLoans } = useListLoans({
-    limit: 10,
-  });
+  const { data: overdueLoans, isLoading: loadingOverdue } = useListLoans({ status: "overdue", limit: 20 });
+  const { data: recentPayments, isLoading: loadingPayments } = useListPayments({ limit: 10 });
+  const { data: recentLoans, isLoading: loadingLoans } = useListLoans({ limit: 10 });
 
   const overdueCount = overdueLoans?.total ?? 0;
 
+  const sendReminder = async (loanId: number) => {
+    setSendingIds(prev => new Set([...prev, loanId]));
+    try {
+      const res = await fetch(`/api/messages/send/${loanId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ channel }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      toast({
+        title: "Reminder Sent ✓",
+        description: `${channel === "whatsapp" ? "WhatsApp" : "SMS"} sent to ${data.to}`,
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Send Failed", description: e.message });
+    } finally {
+      setSendingIds(prev => { const n = new Set(prev); n.delete(loanId); return n; });
+    }
+  };
+
+  const sendAllReminders = async () => {
+    setSendingAll(true);
+    try {
+      const res = await fetch("/api/messages/send-overdue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ channel }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      toast({
+        title: "Reminders Sent",
+        description: `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.`,
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Send Failed", description: e.message });
+    } finally {
+      setSendingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-10 max-w-3xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="relative">
           <Bell className="h-7 w-7 text-sidebar-primary" />
@@ -36,21 +79,66 @@ export default function Notifications() {
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="text-muted-foreground mt-0.5">Alerts and recent activity.</p>
+          <p className="text-muted-foreground mt-0.5">Alerts and overdue reminders.</p>
         </div>
       </div>
 
-      {/* Overdue Alerts */}
+      {/* Overdue Loans + Messaging */}
       <Card className="shadow-sm border-destructive/30 bg-destructive/5">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-destructive text-lg">
-            <AlertCircle className="h-5 w-5" />
-            Overdue Loans
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-destructive text-lg">
+                <AlertCircle className="h-5 w-5" />
+                Overdue Loans
+                {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Send SMS or WhatsApp payment reminders to overdue customers.
+              </CardDescription>
+            </div>
+
             {overdueCount > 0 && (
-              <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                {/* Channel toggle */}
+                <div className="flex rounded-md border border-border overflow-hidden bg-background text-sm">
+                  <button
+                    onClick={() => setChannel("sms")}
+                    className={`px-3 py-1.5 flex items-center gap-1.5 font-medium transition-colors ${
+                      channel === "sms"
+                        ? "bg-sidebar-primary text-white"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> SMS
+                  </button>
+                  <button
+                    onClick={() => setChannel("whatsapp")}
+                    className={`px-3 py-1.5 flex items-center gap-1.5 font-medium transition-colors ${
+                      channel === "whatsapp"
+                        ? "bg-green-600 text-white"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+                  </button>
+                </div>
+
+                {/* Send All */}
+                <Button
+                  size="sm"
+                  onClick={sendAllReminders}
+                  disabled={sendingAll || sendingIds.size > 0}
+                  className="bg-destructive/90 hover:bg-destructive text-white h-8"
+                >
+                  {sendingAll
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Sending…</>
+                    : <><Send className="h-3.5 w-3.5 mr-1.5" /> Send All ({overdueCount})</>
+                  }
+                </Button>
+              </div>
             )}
-          </CardTitle>
-          <CardDescription>Loans past their due date that require immediate attention.</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingOverdue ? (
@@ -65,21 +153,38 @@ export default function Notifications() {
           ) : (
             <div className="space-y-2">
               {overdueLoans.data.map((loan) => (
-                <div key={loan.id} className="flex items-center justify-between p-3 rounded-lg bg-background border border-destructive/20 hover:border-destructive/40 transition-colors">
-                  <div className="flex items-center gap-3">
+                <div
+                  key={loan.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-background border border-destructive/20 hover:border-destructive/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
                     <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-mono text-sm font-semibold">{loan.loanNumber}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {loan.customerName ?? `Customer #${loan.customerId}`} · Due {formatIndianDate(loan.dueDate)}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {(loan as any).customerName ?? `Customer #${loan.customerId}`} · Due {formatIndianDate(loan.dueDate)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-sm font-bold text-destructive">
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="font-mono text-sm font-bold text-destructive hidden sm:block">
                       {formatCurrency(loan.outstandingBalance)}
                     </span>
-                    <Button variant="outline" size="sm" asChild className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sendReminder(loan.id)}
+                      disabled={sendingIds.has(loan.id) || sendingAll}
+                      title={`Send ${channel === "whatsapp" ? "WhatsApp" : "SMS"} reminder`}
+                      className="h-7 text-xs border-sidebar-primary/40 text-sidebar-primary hover:bg-sidebar-primary/10 gap-1"
+                    >
+                      {sendingIds.has(loan.id)
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <><Send className="h-3 w-3" /> Remind</>
+                      }
+                    </Button>
+                    <Button variant="outline" size="sm" asChild
+                      className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
                       <Link href={`/loans/${loan.id}`}>View</Link>
                     </Button>
                   </div>

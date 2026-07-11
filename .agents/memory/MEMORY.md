@@ -1,1 +1,3 @@
 - [Wouter routing pattern](wouter-routing.md) — never wrap the AppLayout in the same Route that has ErrorBoundary key={location}; use ProtectedLayout pattern instead.
+- [Twilio messaging via Replit connector](twilio-connector.md) — use @replit/connectors-sdk ReplitConnectors.proxy(), not the twilio npm package; Account SID must be fetched dynamically from /2010-04-01/Accounts.json.
+- [Drizzle push requires force flag + TTY workaround](drizzle-push.md) — drizzle-kit push always prompts interactively in non-TTY shells; use executeSql CodeExecution callback to apply raw ALTER TABLE / CREATE TABLE instead.

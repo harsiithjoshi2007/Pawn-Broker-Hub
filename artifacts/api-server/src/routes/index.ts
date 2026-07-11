@@ -8,6 +8,8 @@ import dashboardRouter from "./dashboard";
 import calculatorRouter from "./calculator";
 import reportsRouter from "./reports";
 import notificationsRouter from "./notifications";
+import messagesRouter from "./messages";
+import shopSettingsRouter from "./shop-settings";
 
 const router: IRouter = Router();
 
@@ -20,5 +22,7 @@ router.use(dashboardRouter);
 router.use(calculatorRouter);
 router.use(reportsRouter);
 router.use(notificationsRouter);
+router.use(messagesRouter);
+router.use(shopSettingsRouter);
 
 export default router;
