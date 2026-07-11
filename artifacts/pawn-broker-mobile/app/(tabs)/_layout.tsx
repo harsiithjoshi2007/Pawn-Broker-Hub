@@ -8,6 +8,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
 import { useAuth } from '@/context/auth';
+import { BiometricLockScreen } from '@/components/BiometricLockScreen';
 
 // iOS 26 liquid glass native tab bar
 function NativeTabLayout() {
@@ -144,7 +145,7 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  const { user, isInitializing } = useAuth();
+  const { user, isInitializing, canUseBiometricUnlock, biometricUnlocked } = useAuth();
 
   if (isInitializing) {
     return (
@@ -163,6 +164,11 @@ export default function TabLayout() {
 
   if (!user) {
     return <Redirect href="/login" />;
+  }
+
+  // Biometric gate: user has a valid token but hasn't verified this session yet
+  if (canUseBiometricUnlock && !biometricUnlocked) {
+    return <BiometricLockScreen />;
   }
 
   if (isLiquidGlassAvailable()) {

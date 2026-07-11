@@ -9,8 +9,15 @@ import {
 import type { AuthUser } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { registerForPushNotificationsAsync } from '@/hooks/usePushNotifications';
+import {
+  authenticateWithBiometrics,
+  getBiometricCapability,
+  type BiometricCapability,
+} from '@/hooks/useBiometrics';
 
 const TOKEN_KEY = 'pawn_auth_token';
+const BIOMETRIC_KEY = 'pawn_biometric_enabled';
+
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : '';
@@ -18,13 +25,31 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 interface AuthContextType {
   user: AuthUser | null;
   isInitializing: boolean;
+  /** Whether the device supports biometrics and the user has opted in */
+  biometricEnabled: boolean;
+  /** Capability info (type, label, icon) for the current device */
+  biometric: BiometricCapability;
+  /**
+   * True when a stored token exists AND biometrics are enabled.
+   * When true, the tabs layout shows a biometric lock screen.
+   */
+  canUseBiometricUnlock: boolean;
+  /**
+   * Whether biometrics have been successfully verified this session.
+   * False on cold launch when canUseBiometricUnlock is true — the tabs
+   * layout renders a lock screen until this becomes true.
+   */
+  biometricUnlocked: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Challenge biometrics; sets biometricUnlocked=true on success */
+  loginWithBiometrics: () => Promise<boolean>;
+  enableBiometrics: () => Promise<void>;
+  disableBiometrics: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-/** Fire-and-forget: register an Expo push token with the API. */
 async function sendPushTokenToServer(token: string, authToken: string): Promise<void> {
   try {
     await fetch(`${API_BASE}/api/notifications/push-token`, {
@@ -35,55 +60,68 @@ async function sendPushTokenToServer(token: string, authToken: string): Promise<
       },
       body: JSON.stringify({ pushToken: token }),
     });
-  } catch {
-    // Best-effort — don't block login if this fails
-  }
+  } catch { /* best-effort */ }
 }
 
-/** Fire-and-forget: clear push token from the API on logout. */
 async function clearPushTokenFromServer(authToken: string): Promise<void> {
   try {
     await fetch(`${API_BASE}/api/notifications/push-token`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authToken}` },
     });
-  } catch {
-    // Best-effort
-  }
+  } catch { /* best-effort */ }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
-  // ref always holds the latest token — used by the bearer getter
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricUnlocked, setBiometricUnlocked] = useState(false);
+  const [biometric, setBiometric] = useState<BiometricCapability>({
+    available: false,
+    type: null,
+    label: 'Biometrics',
+    icon: 'finger-print-outline',
+  });
+
   const tokenRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Register the token getter once. It reads from the ref so it always
-  // returns the latest value without needing to re-register.
   useEffect(() => {
     setAuthTokenGetter(() => tokenRef.current);
   }, []);
 
-  // Keep ref in sync with state
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
 
-  // Load persisted token from secure storage on startup
+  // Load token + biometric prefs + device capability in one shot
   useEffect(() => {
-    SecureStore.getItemAsync(TOKEN_KEY)
-      .then((stored) => {
-        if (stored) {
-          tokenRef.current = stored;
-          setToken(stored);
+    Promise.all([
+      SecureStore.getItemAsync(TOKEN_KEY),
+      SecureStore.getItemAsync(BIOMETRIC_KEY),
+      getBiometricCapability(),
+    ])
+      .then(([storedToken, storedBioFlag, capability]) => {
+        if (storedToken) {
+          tokenRef.current = storedToken;
+          setToken(storedToken);
         }
+        setBiometric(capability);
+        const bioOn = capability.available && storedBioFlag === 'true';
+        setBiometricEnabled(bioOn);
+        // No stored token → nothing to gate, consider already "unlocked"
+        if (!storedToken || !bioOn) {
+          setBiometricUnlocked(true);
+        }
+        // storedToken + bioOn → biometricUnlocked stays false; gate is active
       })
-      .catch(() => {})
+      .catch(() => {
+        setBiometricUnlocked(true); // safe fallback
+      })
       .finally(() => setIsStorageLoaded(true));
   }, []);
 
-  // Verify the token with the server and hydrate the user
   const {
     data: user,
     isLoading: isMeLoading,
@@ -96,12 +134,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
-  // If the stored token is invalid (401), clear it
+  // Invalid token → clear everything including biometric gate
   useEffect(() => {
     if (isStorageLoaded && token && isMeError) {
       SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+      SecureStore.deleteItemAsync(BIOMETRIC_KEY).catch(() => {});
       tokenRef.current = null;
       setToken(null);
+      setBiometricEnabled(false);
+      setBiometricUnlocked(true); // no gate without a token
     }
   }, [isMeError, isStorageLoaded, token]);
 
@@ -116,39 +157,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await SecureStore.setItemAsync(TOKEN_KEY, result.token);
         tokenRef.current = result.token;
         setToken(result.token);
-        // Invalidate so useGetMe refetches with the new token
+        setBiometricUnlocked(true); // password login counts as unlocked
         await queryClient.invalidateQueries();
 
-        // Register push token in the background (native only)
         registerForPushNotificationsAsync().then((pushToken) => {
-          if (pushToken) {
-            sendPushTokenToServer(pushToken, result.token!);
-          }
+          if (pushToken) sendPushTokenToServer(pushToken, result.token!);
         });
       }
     },
     [loginMutation, queryClient],
   );
 
-  const logout = useCallback(async () => {
-    // Clear push token from the server before wiping the local token
-    if (tokenRef.current) {
-      await clearPushTokenFromServer(tokenRef.current);
+  const loginWithBiometrics = useCallback(async (): Promise<boolean> => {
+    if (!biometricEnabled || !tokenRef.current) return false;
+    const success = await authenticateWithBiometrics(
+      `Sign in with ${biometric.label}`
+    );
+    if (success) {
+      setBiometricUnlocked(true);
     }
+    return success;
+  }, [biometricEnabled, biometric.label]);
+
+  const enableBiometrics = useCallback(async () => {
+    if (!biometric.available) return;
+    const confirmed = await authenticateWithBiometrics(
+      `Confirm with ${biometric.label} to enable quick sign-in`
+    );
+    if (confirmed) {
+      await SecureStore.setItemAsync(BIOMETRIC_KEY, 'true');
+      setBiometricEnabled(true);
+      // Already in an authenticated session — stays unlocked
+    }
+  }, [biometric]);
+
+  const disableBiometrics = useCallback(async () => {
+    await SecureStore.deleteItemAsync(BIOMETRIC_KEY);
+    setBiometricEnabled(false);
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (tokenRef.current) await clearPushTokenFromServer(tokenRef.current);
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
     tokenRef.current = null;
     setToken(null);
+    setBiometricUnlocked(false); // reset gate for next session
     queryClient.clear();
     router.replace('/login');
   }, [queryClient]);
 
-  // initializing = storage not loaded yet, or token exists but getMe still loading
   const isInitializing =
     !isStorageLoaded || (isStorageLoaded && !!token && isMeLoading);
 
+  const canUseBiometricUnlock = biometricEnabled && !!token;
+
   return (
     <AuthContext.Provider
-      value={{ user: user ?? null, isInitializing, login, logout }}
+      value={{
+        user: user ?? null,
+        isInitializing,
+        biometricEnabled,
+        biometric,
+        canUseBiometricUnlock,
+        biometricUnlocked,
+        login,
+        loginWithBiometrics,
+        enableBiometrics,
+        disableBiometrics,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

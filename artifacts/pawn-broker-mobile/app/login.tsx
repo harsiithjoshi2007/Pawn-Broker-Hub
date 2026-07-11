@@ -24,10 +24,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+
+  const { login, enableBiometrics, biometric } = useAuth();
   const insets = useSafeAreaInsets();
   const passwordRef = useRef<RNTextInput>(null);
-
   const isWeb = Platform.OS === 'web';
 
   const handleLogin = async () => {
@@ -39,7 +39,30 @@ export default function LoginScreen() {
     try {
       await login(email.trim().toLowerCase(), password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(tabs)');
+
+      // After first password login, offer to enable biometrics on native
+      if (biometric.available && !isWeb) {
+        Alert.alert(
+          `Enable ${biometric.label}?`,
+          `Sign in faster next time using ${biometric.label} instead of your password.`,
+          [
+            {
+              text: 'Not now',
+              style: 'cancel',
+              onPress: () => router.replace('/(tabs)'),
+            },
+            {
+              text: `Enable ${biometric.label}`,
+              onPress: async () => {
+                await enableBiometrics();
+                router.replace('/(tabs)');
+              },
+            },
+          ]
+        );
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Login failed', 'Invalid email or password. Please try again.');
