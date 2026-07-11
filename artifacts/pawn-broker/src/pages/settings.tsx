@@ -16,6 +16,7 @@ interface ShopSettingsForm {
   shopName: string;
   shopPhone: string;
   shopAddress: string;
+  twilioAccountSid: string;
   twilioFromNumber: string;
   twilioWhatsappEnabled: boolean;
 }
@@ -31,7 +32,7 @@ export default function Settings() {
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [isSavingShop, setIsSavingShop] = useState(false);
   const [shopForm, setShopForm] = useState<ShopSettingsForm>({
-    shopName: "", shopPhone: "", shopAddress: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
+    shopName: "", shopPhone: "", shopAddress: "", twilioAccountSid: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function Settings() {
       shopName:              shopSettings?.shopName              || "",
       shopPhone:             shopSettings?.shopPhone             || "",
       shopAddress:           shopSettings?.shopAddress           || "",
+      twilioAccountSid:      (shopSettings as any)?.twilioAccountSid || "",
       twilioFromNumber:      shopSettings?.twilioFromNumber      || "",
       twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled || false,
     });
@@ -348,11 +350,23 @@ export default function Settings() {
                 </div>
               </div>
               <Separator />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" /> Twilio Messaging
+              </p>
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-sidebar-primary" />
-                  Twilio Sender Number
-                </Label>
+                <Label>Twilio Account SID <span className="text-destructive">*</span></Label>
+                <Input
+                  value={shopForm.twilioAccountSid}
+                  onChange={e => setShopForm(f => ({ ...f, twilioAccountSid: e.target.value }))}
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Found on your <strong>Twilio Console</strong> dashboard (starts with AC…).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Twilio Sender Number <span className="text-destructive">*</span></Label>
                 <Input
                   value={shopForm.twilioFromNumber}
                   onChange={e => setShopForm(f => ({ ...f, twilioFromNumber: e.target.value }))}
@@ -360,7 +374,7 @@ export default function Settings() {
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Your Twilio-registered number for sending SMS. For WhatsApp, this number must be enrolled in Twilio's WhatsApp service.
+                  Your Twilio-registered number for SMS. For WhatsApp, enroll it in Twilio's WhatsApp service.
                 </p>
               </div>
               <div className="flex items-center gap-3 py-1">
@@ -404,6 +418,12 @@ export default function Settings() {
               <div className="col-span-2">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Address</Label>
                 <p className="mt-1 font-medium">{shopSettings?.shopAddress || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Account SID</Label>
+                <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.twilioAccountSid ? "text-muted-foreground italic" : ""}`}>
+                  {(shopSettings as any)?.twilioAccountSid ? "AC••••••••••••••••••••••••••••••••" : "Not configured"}
+                </p>
               </div>
               <div>
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio SMS Number</Label>

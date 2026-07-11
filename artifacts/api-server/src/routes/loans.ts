@@ -186,6 +186,8 @@ router.get("/loans/:id", requireAuth, async (req, res) => {
       loan: loansTable,
       customerName: customersTable.name,
       customerPhone: customersTable.phone,
+      customerRelationType: customersTable.relationType,
+      customerRelativeName: customersTable.relativeName,
     })
       .from(loansTable)
       .leftJoin(customersTable, eq(loansTable.customerId, customersTable.id))
@@ -203,6 +205,8 @@ router.get("/loans/:id", requireAuth, async (req, res) => {
       ...loans[0].loan,
       customerName: loans[0].customerName,
       customerPhone: loans[0].customerPhone,
+      customerRelationType: loans[0].customerRelationType,
+      customerRelativeName: loans[0].customerRelativeName,
       jewelleryItems,
       payments,
     });
@@ -216,9 +220,10 @@ router.get("/loans/:id", requireAuth, async (req, res) => {
 router.patch("/loans/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { status, notes, penaltyRate, dueDate } = req.body;
+    const { status, notes, penaltyRate, dueDate, loanNumber } = req.body;
 
     const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
+    if (loanNumber !== undefined && loanNumber) updatePayload.loanNumber = loanNumber.trim();
     if (status !== undefined) updatePayload.status = status;
     if (notes !== undefined) updatePayload.notes = notes;
     if (penaltyRate !== undefined) updatePayload.penaltyRate = penaltyRate;

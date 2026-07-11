@@ -13,51 +13,60 @@ Use `@replit/connectors-sdk` with `ReplitConnectors`. Do NOT use the `twilio` np
 `connectors.proxy()` behaves like `fetch()` — it returns a `Response`. You MUST call `.json()` on it:
 
 ```ts
-// WRONG — accountData is a Response, not JSON:
-const accountData = await connectors.proxy("twilio", "/2010-04-01/Accounts.json") as any;
+// WRONG — treats Response as JSON, always undefined:
+const accountData = await connectors.proxy("twilio", "...") as any;
 const sid = accountData?.accounts?.[0]?.sid; // always undefined!
 
 // CORRECT — parse the response:
-const response = await connectors.proxy("twilio", "/2010-04-01/Accounts.json") as Response;
+const response = await connectors.proxy("twilio", "...") as Response;
 const accountData = await response.json();
-const sid = accountData?.accounts?.[0]?.sid;
 ```
 
-## Preferred: get Account SID from connector settings (no extra API call)
+## CRITICAL: Account SID comes from shop_settings, NOT the connector
 
-The connector already stores `account_sid` in its settings. Use `listConnections()` instead:
+`connectors.listConnections()` from server-side code does NOT return unredacted settings (the `settings` object has `account_sid: "[redacted]"`). Calling `GET /2010-04-01/Accounts.json` also fails with API key auth.
+
+**The correct approach:** Store `twilioAccountSid` in the `shop_settings` DB table. The admin enters it once from Settings → Shop & Messaging (find it on Twilio Console dashboard, starts with AC…).
 
 ```ts
-const connectors = new ReplitConnectors();
-const connections = await connectors.listConnections({ connector_names: "twilio" });
-const accountSid = (connections[0] as any)?.settings?.account_sid as string | undefined;
-if (!accountSid) throw new Error("Could not retrieve Twilio Account SID from connector settings.");
+// In messages route:
+const settings = await getShopSettings();
+if (!settings.twilioAccountSid) {
+  return res.status(400).json({ error: "Twilio Account SID not configured." });
+}
+// Then pass accountSid directly to the send function:
+await sendTwilioMessage(to, body, fromNumber, settings.twilioAccountSid, useWhatsApp);
 ```
 
-## Sending a message
+## Sending a message (correct pattern)
 
 ```ts
-const msgResponse = await connectors.proxy(
-  "twilio",
-  `/2010-04-01/Accounts/${accountSid}/Messages.json`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ To: toNum, From: fromNum, Body: text }),
-    // Pass URLSearchParams directly — SDK handles it natively
-  },
-) as Response;
+async function sendTwilioMessage(to, body, fromNumber, accountSid, useWhatsApp) {
+  const connectors = new ReplitConnectors();
+  const toNum = useWhatsApp ? `whatsapp:${to}` : to;
+  const fromNum = useWhatsApp ? `whatsapp:${fromNumber}` : fromNumber;
 
-if (!msgResponse.ok) {
-  const errData = await msgResponse.json().catch(() => ({})) as any;
-  throw new Error(errData?.message ?? `Twilio error ${msgResponse.status}`);
+  const msgResponse = await connectors.proxy(
+    "twilio",
+    `/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ To: toNum, From: fromNum, Body: body }),
+    },
+  ) as Response;
+
+  if (!msgResponse.ok) {
+    const errData = await msgResponse.json().catch(() => ({})) as any;
+    throw new Error(errData?.message ?? `Twilio error ${msgResponse.status}`);
+  }
 }
 ```
 
 ## WhatsApp
-Prefix both To and From with `"whatsapp:"`:
-- `To: "whatsapp:+91XXXXXXXXXX"`, `From: "whatsapp:+1XXXXXXXXXX"`
-- The From number must be enrolled in Twilio's WhatsApp service or sandbox.
+Prefix both To and From with `"whatsapp:"`. The From number must be enrolled in Twilio's WhatsApp service or sandbox.
 
-## Shop settings
-The `twilioFromNumber` (sender) is stored in `shop_settings` DB table, configured via Settings → Shop & Messaging in the UI.
+## Shop settings required fields
+- `twilioAccountSid` — Twilio Account SID (ACxxx…), entered by admin in Settings
+- `twilioFromNumber` — Twilio phone number in E.164 format
+- `twilioWhatsappEnabled` — boolean toggle

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGetLoan, useRecordPayment, useCloseLoan, useRenewLoan, useUpdateLoan, useDeleteLoan, getGetLoanQueryKey, getListLoansQueryKey, getListPaymentsQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,16 @@ export default function LoanDetail() {
   const [editPenaltyRate, setEditPenaltyRate] = useState<string>("");
   const [editDueDate, setEditDueDate] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
+  const [editLoanNumber, setEditLoanNumber] = useState<string>("");
+
+  // Shop settings (for print receipt)
+  const [shopSettings, setShopSettings] = useState<any>(null);
+  useEffect(() => {
+    fetch("/api/shop-settings", { credentials: "include" })
+      .then(r => r.json())
+      .then(setShopSettings)
+      .catch(() => {});
+  }, []);
 
   const handleDeleteLoan = async () => {
     try {
@@ -73,6 +83,7 @@ export default function LoanDetail() {
 
   const openEditDialog = () => {
     if (!loan) return;
+    setEditLoanNumber(loan.loanNumber || "");
     setEditNotes(loan.notes || "");
     setEditPenaltyRate(loan.penaltyRate != null ? String(loan.penaltyRate) : "");
     setEditDueDate(loan.dueDate ? loan.dueDate.split("T")[0] : "");
@@ -157,6 +168,7 @@ export default function LoanDetail() {
   const handleEditLoan = async () => {
     try {
       const payload: Record<string, any> = {};
+      if (editLoanNumber.trim() && editLoanNumber.trim() !== loan.loanNumber) payload.loanNumber = editLoanNumber.trim();
       if (editNotes !== (loan.notes || "")) payload.notes = editNotes || null;
       if (editPenaltyRate !== (loan.penaltyRate != null ? String(loan.penaltyRate) : "")) {
         payload.penaltyRate = editPenaltyRate ? parseFloat(editPenaltyRate) : null;
@@ -187,8 +199,140 @@ export default function LoanDetail() {
   const totalDue = (loan.principalAmount || 0) + (loan.totalInterest || 0);
   const percentPaid = totalDue > 0 ? ((loan.amountPaid || 0) / totalDue) * 100 : 0;
 
+  const fmt = (n: number | null | undefined) =>
+    `Rs.${(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
   return (
-    <div className="space-y-6 pb-20 max-w-6xl mx-auto">
+    <div>
+      {/* ── PRINT-ONLY RECEIPT (hidden on screen) ─────────────────────────── */}
+      <div className="hidden print:block text-black bg-white p-6 max-w-[700px] mx-auto font-sans text-sm">
+        {/* Shop Header */}
+        <div className="text-center border-b-2 border-black pb-4 mb-4">
+          <h1 className="text-2xl font-bold uppercase tracking-wide">
+            {shopSettings?.shopName || "Pawn Broker"}
+          </h1>
+          {shopSettings?.shopAddress && (
+            <p className="text-sm mt-1">{shopSettings.shopAddress}</p>
+          )}
+          {shopSettings?.shopPhone && (
+            <p className="text-sm">Ph: {shopSettings.shopPhone}</p>
+          )}
+          <h2 className="text-lg font-bold uppercase mt-3 border border-black inline-block px-6 py-1">
+            Loan Receipt
+          </h2>
+        </div>
+
+        {/* Loan Info Grid */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
+          <div><span className="font-semibold">Loan No:</span> {loan.loanNumber}</div>
+          <div><span className="font-semibold">Type:</span> {loan.loanType === "gold" ? "Gold Loan" : "Silver Loan"}</div>
+          <div><span className="font-semibold">Issue Date:</span> {formatIndianDate(loan.startDate)}</div>
+          <div><span className="font-semibold">Due Date:</span> {formatIndianDate(loan.dueDate)}</div>
+          <div><span className="font-semibold">Status:</span> {loan.status.replace("_", " ").toUpperCase()}</div>
+          <div><span className="font-semibold">Duration:</span> {loan.duration} {loan.durationUnit}</div>
+        </div>
+
+        {/* Customer Info */}
+        <div className="border border-black p-3 mb-4">
+          <h3 className="font-bold uppercase text-xs tracking-wider mb-2 border-b border-black pb-1">Customer Information</h3>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+            <div><span className="font-semibold">Name:</span> {loan.customerName}</div>
+            {(loan as any).customerRelationType && (
+              <div>
+                <span className="font-semibold">Relation:</span>{" "}
+                {(loan as any).customerRelationType} {(loan as any).customerRelativeName}
+              </div>
+            )}
+            <div><span className="font-semibold">Phone:</span> {(loan as any).customerPhone || "—"}</div>
+          </div>
+        </div>
+
+        {/* Financial Summary */}
+        <div className="border border-black p-3 mb-4">
+          <h3 className="font-bold uppercase text-xs tracking-wider mb-2 border-b border-black pb-1">Financial Details</h3>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+            <div><span className="font-semibold">Principal Amount:</span> {fmt(loan.principalAmount)}</div>
+            <div>
+              <span className="font-semibold">Interest Rate:</span>{" "}
+              {loan.interestRate}% per {loan.ratePeriod} ({loan.interestType})
+            </div>
+            <div><span className="font-semibold">Total Interest:</span> {fmt(loan.totalInterest)}</div>
+            <div><span className="font-semibold">Total Payable:</span> {fmt(loan.totalPayable)}</div>
+            <div><span className="font-semibold">Amount Paid:</span> {fmt(loan.amountPaid)}</div>
+            <div className="font-bold">
+              <span>Outstanding Balance:</span> {fmt(loan.outstandingBalance)}
+            </div>
+            {loan.penaltyRate != null && (
+              <div><span className="font-semibold">Penalty Rate:</span> {loan.penaltyRate}% per month</div>
+            )}
+          </div>
+        </div>
+
+        {/* Pledged Items */}
+        {loan.jewelleryItems && loan.jewelleryItems.length > 0 && (
+          <div className="border border-black p-3 mb-4">
+            <h3 className="font-bold uppercase text-xs tracking-wider mb-2 border-b border-black pb-1">Pledged Items</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-400">
+                  <th className="text-left py-1">#</th>
+                  <th className="text-left py-1">Item</th>
+                  <th className="text-left py-1">Purity</th>
+                  <th className="text-right py-1">Gross</th>
+                  <th className="text-right py-1">Net</th>
+                  <th className="text-right py-1">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loan.jewelleryItems.map((item, i) => (
+                  <tr key={item.id} className="border-b border-gray-200">
+                    <td className="py-1">{i + 1}</td>
+                    <td className="py-1">{item.jewelleryType}</td>
+                    <td className="py-1">{item.purity}</td>
+                    <td className="text-right py-1">{item.grossWeight}g</td>
+                    <td className="text-right py-1">{item.netWeight}g</td>
+                    <td className="text-right py-1">{fmt(item.estimatedValue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="font-bold border-t border-black">
+                  <td colSpan={5} className="pt-1">Total</td>
+                  <td className="text-right pt-1">
+                    {fmt(loan.jewelleryItems.reduce((s, i) => s + (i.estimatedValue || 0), 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+
+        {/* Disclaimer */}
+        <div className="border border-gray-400 bg-gray-50 p-3 mb-6 text-xs">
+          <h3 className="font-bold uppercase tracking-wider mb-1">Terms & Disclaimer</h3>
+          <ol className="list-decimal list-inside space-y-1 text-gray-700">
+            <li>Interest is charged at <strong>{loan.interestRate}% per {loan.ratePeriod}</strong> on the principal amount of {fmt(loan.principalAmount)}.</li>
+            <li>The pledged item(s) will be held as collateral until the full outstanding amount is cleared.</li>
+            <li>In case of non-payment beyond the due date, additional penalty charges may apply at {loan.penaltyRate ?? 0}% per month.</li>
+            <li>If the loan is not settled within the expiry period, the pledged items may be auctioned to recover dues.</li>
+            <li>This is a computer-generated receipt. For queries, contact {shopSettings?.shopPhone || "the shop"}.</li>
+          </ol>
+        </div>
+
+        {/* Signatures */}
+        <div className="grid grid-cols-2 gap-8 mt-8">
+          <div className="border-t border-black pt-2 text-center text-xs">
+            <p>Customer Signature</p>
+          </div>
+          <div className="border-t border-black pt-2 text-center text-xs">
+            <p>Authorised Signatory</p>
+            <p className="font-semibold mt-1">{shopSettings?.shopName || "Pawn Broker"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── SCREEN CONTENT (hidden when printing) ─────────────────────────── */}
+      <div className="space-y-6 pb-20 max-w-6xl mx-auto print:hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -265,6 +409,16 @@ export default function LoanDetail() {
                 <DialogDescription>Update notes, penalty rate, due date, or status. Financial amounts must be changed via Renew.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Loan Number</Label>
+                  <Input
+                    value={editLoanNumber}
+                    onChange={e => setEditLoanNumber(e.target.value)}
+                    className="font-mono"
+                    placeholder="e.g. GL-2026-00001"
+                  />
+                  <p className="text-xs text-muted-foreground">Only change if there was an entry error.</p>
+                </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <Select value={editStatus} onValueChange={setEditStatus}>
@@ -643,6 +797,7 @@ export default function LoanDetail() {
           </Card>
         </div>
       </div>
+      </div>{/* end screen-content wrapper */}
     </div>
   );
 }

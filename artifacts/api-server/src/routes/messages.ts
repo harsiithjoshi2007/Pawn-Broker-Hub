@@ -14,6 +14,7 @@ async function getShopSettings() {
     shopName: "GoldVault Pawn Broker",
     shopPhone: null,
     shopAddress: null,
+    twilioAccountSid: null,
     twilioFromNumber: null,
     twilioWhatsappEnabled: false,
   };
@@ -23,16 +24,13 @@ async function sendTwilioMessage(
   to: string,
   body: string,
   fromNumber: string,
+  accountSid: string,
   useWhatsApp: boolean,
 ): Promise<void> {
   const connectors = new ReplitConnectors();
 
-  // Get Account SID from connector settings — avoids a redundant API round-trip.
-  // proxy() returns a Response object (like fetch), NOT parsed JSON.
-  const connections = await connectors.listConnections({ connector_names: "twilio" });
-  const accountSid = (connections[0] as any)?.settings?.account_sid as string | undefined;
-  if (!accountSid) throw new Error("Could not retrieve Twilio Account SID from connector settings.");
-
+  // proxy() returns a Response (like fetch) — must call .json() to read it.
+  // Account SID is stored in shop_settings by the admin; no dynamic lookup needed.
   const toNum   = useWhatsApp ? `whatsapp:${to}`         : to;
   const fromNum = useWhatsApp ? `whatsapp:${fromNumber}` : fromNumber;
 
@@ -92,6 +90,11 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
     const useWhatsApp = req.body.channel === "whatsapp";
 
     const settings = await getShopSettings();
+    if (!settings.twilioAccountSid) {
+      return res.status(400).json({
+        error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging.",
+      });
+    }
     if (!settings.twilioFromNumber) {
       return res.status(400).json({
         error: "Twilio sender number not configured. Go to Settings → Shop & Messaging.",
@@ -124,7 +127,7 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
       loan.dueDate,
     );
 
-    await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, useWhatsApp);
+    await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, useWhatsApp);
     return res.json({ success: true, to: toNumber, channel: useWhatsApp ? "whatsapp" : "sms" });
   } catch (err: any) {
     req.log.error({ err }, "Send single reminder error");
@@ -138,6 +141,11 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
     const useWhatsApp = req.body.channel === "whatsapp";
 
     const settings = await getShopSettings();
+    if (!settings.twilioAccountSid) {
+      return res.status(400).json({
+        error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging.",
+      });
+    }
     if (!settings.twilioFromNumber) {
       return res.status(400).json({
         error: "Twilio sender number not configured. Go to Settings → Shop & Messaging.",
@@ -173,7 +181,7 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
           loan.principalAmount, loan.outstandingBalance,
           loan.dueDate,
         );
-        await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, useWhatsApp);
+        await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, useWhatsApp);
         sent++;
         results.push({ loanId: loan.id, loanNumber: loan.loanNumber, customerName, status: "sent", to: toNumber });
       } catch (e: any) {

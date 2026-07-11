@@ -15,6 +15,7 @@ router.get("/shop-settings", requireAuth, async (req, res) => {
         shopName: "GoldVault Pawn Broker",
         shopPhone: null,
         shopAddress: null,
+        twilioAccountSid: null,
         twilioFromNumber: null,
         twilioWhatsappEnabled: false,
       });
@@ -33,6 +34,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
       shopName,
       shopPhone,
       shopAddress,
+      twilioAccountSid,
       twilioFromNumber,
       twilioWhatsappEnabled,
     } = req.body;
@@ -43,10 +45,11 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
       const [updated] = await db
         .update(shopSettingsTable)
         .set({
-          ...(shopName             !== undefined && { shopName }),
-          ...(shopPhone            !== undefined && { shopPhone:            shopPhone || null }),
-          ...(shopAddress          !== undefined && { shopAddress:          shopAddress || null }),
-          ...(twilioFromNumber     !== undefined && { twilioFromNumber:     twilioFromNumber || null }),
+          ...(shopName              !== undefined && { shopName }),
+          ...(shopPhone             !== undefined && { shopPhone:             shopPhone || null }),
+          ...(shopAddress           !== undefined && { shopAddress:           shopAddress || null }),
+          ...(twilioAccountSid      !== undefined && { twilioAccountSid:      twilioAccountSid || null }),
+          ...(twilioFromNumber      !== undefined && { twilioFromNumber:      twilioFromNumber || null }),
           ...(twilioWhatsappEnabled !== undefined && { twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled) }),
           updatedAt: new Date(),
         })
@@ -58,10 +61,11 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
     const [created] = await db
       .insert(shopSettingsTable)
       .values({
-        shopName:              shopName             || "GoldVault Pawn Broker",
-        shopPhone:             shopPhone            || null,
-        shopAddress:           shopAddress          || null,
-        twilioFromNumber:      twilioFromNumber     || null,
+        shopName:              shopName          || "GoldVault Pawn Broker",
+        shopPhone:             shopPhone         || null,
+        shopAddress:           shopAddress       || null,
+        twilioAccountSid:      twilioAccountSid  || null,
+        twilioFromNumber:      twilioFromNumber  || null,
         twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled),
       })
       .returning();
