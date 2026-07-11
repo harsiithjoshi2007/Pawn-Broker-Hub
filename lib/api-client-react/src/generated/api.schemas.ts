@@ -367,6 +367,8 @@ export interface LoanUpdate {
   status?: string;
   notes?: string;
   penaltyRate?: number;
+  /** ISO date string (yyyy-MM-dd) for extending the due date */
+  dueDate?: string;
 }
 
 export type LoanCloseInputPaymentMode = typeof LoanCloseInputPaymentMode[keyof typeof LoanCloseInputPaymentMode];

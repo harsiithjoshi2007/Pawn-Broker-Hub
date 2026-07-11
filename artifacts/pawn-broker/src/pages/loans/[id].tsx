@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { useGetLoan, useRecordPayment, useCloseLoan, useRenewLoan, getGetLoanQueryKey, getListLoansQueryKey, getListPaymentsQueryKey } from "@workspace/api-client-react";
+import { useGetLoan, useRecordPayment, useCloseLoan, useRenewLoan, useUpdateLoan, getGetLoanQueryKey, getListLoansQueryKey, getListPaymentsQueryKey } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Printer, CreditCard, XCircle, RefreshCw, AlertCircle, FileText, CheckCircle2, ChevronRight, Gem, History } from "lucide-react";
+import { ArrowLeft, Printer, CreditCard, XCircle, RefreshCw, AlertCircle, FileText, CheckCircle2, ChevronRight, Gem, History, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
@@ -26,6 +27,7 @@ export default function LoanDetail() {
   const recordPayment = useRecordPayment();
   const closeLoan = useCloseLoan();
   const renewLoan = useRenewLoan();
+  const updateLoan = useUpdateLoan();
 
   // Payment State
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -44,6 +46,22 @@ export default function LoanDetail() {
   const [renewDuration, setRenewDuration] = useState<string>("");
   const [renewDurationUnit, setRenewDurationUnit] = useState<string>("months");
 
+  // Edit Loan State
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editNotes, setEditNotes] = useState<string>("");
+  const [editPenaltyRate, setEditPenaltyRate] = useState<string>("");
+  const [editDueDate, setEditDueDate] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("");
+
+  const openEditDialog = () => {
+    if (!loan) return;
+    setEditNotes(loan.notes || "");
+    setEditPenaltyRate(loan.penaltyRate != null ? String(loan.penaltyRate) : "");
+    setEditDueDate(loan.dueDate ? loan.dueDate.split("T")[0] : "");
+    setEditStatus(loan.status || "active");
+    setIsEditOpen(true);
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   }
@@ -51,6 +69,11 @@ export default function LoanDetail() {
   if (!loan) {
     return <div className="text-center py-12">Loan not found</div>;
   }
+
+  const invalidateLoan = () => {
+    queryClient.invalidateQueries({ queryKey: getGetLoanQueryKey(loanId) });
+    queryClient.invalidateQueries({ queryKey: getListLoansQueryKey() });
+  };
 
   const handleRecordPayment = async () => {
     try {
@@ -69,9 +92,7 @@ export default function LoanDetail() {
       setPaymentAmount("");
       setReference("");
       
-      // Update cache locally instead of invalidating if possible, but invalidate is safer
-      queryClient.invalidateQueries({ queryKey: getGetLoanQueryKey(loanId) });
-      queryClient.invalidateQueries({ queryKey: getListLoansQueryKey() });
+      invalidateLoan();
       queryClient.invalidateQueries({ queryKey: getListPaymentsQueryKey() });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message || "Failed to record payment" });
@@ -90,8 +111,7 @@ export default function LoanDetail() {
       
       toast({ title: "Loan Closed", description: "The loan has been successfully closed." });
       setIsCloseOpen(false);
-      queryClient.invalidateQueries({ queryKey: getGetLoanQueryKey(loanId) });
-      queryClient.invalidateQueries({ queryKey: getListLoansQueryKey() });
+      invalidateLoan();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message || "Failed to close loan" });
     }
@@ -110,10 +130,35 @@ export default function LoanDetail() {
       
       toast({ title: "Loan Renewed", description: "The loan has been successfully renewed." });
       setIsRenewOpen(false);
-      queryClient.invalidateQueries({ queryKey: getGetLoanQueryKey(loanId) });
-      queryClient.invalidateQueries({ queryKey: getListLoansQueryKey() });
+      invalidateLoan();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message || "Failed to renew loan" });
+    }
+  };
+
+  const handleEditLoan = async () => {
+    try {
+      const payload: Record<string, any> = {};
+      if (editNotes !== (loan.notes || "")) payload.notes = editNotes || null;
+      if (editPenaltyRate !== (loan.penaltyRate != null ? String(loan.penaltyRate) : "")) {
+        payload.penaltyRate = editPenaltyRate ? parseFloat(editPenaltyRate) : null;
+      }
+      if (editDueDate && editDueDate !== (loan.dueDate ? loan.dueDate.split("T")[0] : "")) {
+        payload.dueDate = editDueDate;
+      }
+      if (editStatus !== loan.status) payload.status = editStatus;
+
+      if (Object.keys(payload).length === 0) {
+        setIsEditOpen(false);
+        return;
+      }
+
+      await updateLoan.mutateAsync({ id: loanId, data: payload });
+      toast({ title: "Loan Updated", description: "Loan details have been saved." });
+      setIsEditOpen(false);
+      invalidateLoan();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Failed to update loan" });
     }
   };
 
@@ -158,6 +203,75 @@ export default function LoanDetail() {
           <Button variant="outline" className="print:hidden bg-background" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" /> Print Receipt
           </Button>
+
+          {/* Edit Loan — always available (admin/manager use) */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="print:hidden bg-background" onClick={openEditDialog}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit Loan
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Loan Details</DialogTitle>
+                <DialogDescription>Update notes, penalty rate, due date, or status. Financial amounts must be changed via Renew.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={editStatus} onValueChange={setEditStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="auction">Auction</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Due Date</Label>
+                  <Input
+                    type="date"
+                    value={editDueDate}
+                    onChange={e => setEditDueDate(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Expiry date will be auto-set to 1 month after the due date.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Penalty Rate (% per month, optional)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={editPenaltyRate}
+                    onChange={e => setEditPenaltyRate(e.target.value)}
+                    placeholder="e.g. 2.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Notes / Remarks</Label>
+                  <Textarea
+                    value={editNotes}
+                    onChange={e => setEditNotes(e.target.value)}
+                    placeholder="Any internal notes about this loan..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={handleEditLoan}
+                  disabled={updateLoan.isPending}
+                  className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white"
+                >
+                  {updateLoan.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
           {isActive && (
             <>
@@ -176,12 +290,12 @@ export default function LoanDetail() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>New Interest Rate (%)</Label>
-                        <Input type="number" step="0.1" value={renewInterest} onChange={e => setRenewInterest(e.target.value)} defaultValue={loan.interestRate} />
+                        <Input type="number" step="0.1" value={renewInterest} onChange={e => setRenewInterest(e.target.value)} placeholder={String(loan.interestRate)} />
                       </div>
                       <div className="space-y-2">
                         <Label>New Duration</Label>
                         <div className="flex gap-2">
-                          <Input type="number" className="w-1/2" value={renewDuration} onChange={e => setRenewDuration(e.target.value)} defaultValue={loan.duration} />
+                          <Input type="number" className="w-1/2" value={renewDuration} onChange={e => setRenewDuration(e.target.value)} placeholder={String(loan.duration)} />
                           <Select value={renewDurationUnit} onValueChange={setRenewDurationUnit}>
                             <SelectTrigger className="w-1/2"><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -351,6 +465,12 @@ export default function LoanDetail() {
                     {formatIndianDate(loan.dueDate)}
                   </p>
                 </div>
+                {loan.penaltyRate != null && (
+                  <div>
+                    <p className="text-muted-foreground mb-1">Penalty Rate</p>
+                    <p className="font-medium">{loan.penaltyRate}% / month</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -456,16 +576,23 @@ export default function LoanDetail() {
             </CardContent>
           </Card>
 
-          {loan.notes && (
-            <Card className="border-border/50 shadow-sm bg-muted/10">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Notes & Remarks</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card className="border-border/50 shadow-sm bg-muted/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                Notes & Remarks
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={openEditDialog}>
+                  <Pencil className="h-3 w-3 mr-1" /> Edit
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loan.notes ? (
                 <p className="text-sm text-foreground/80 whitespace-pre-wrap">{loan.notes}</p>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No notes added. Click Edit to add remarks.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

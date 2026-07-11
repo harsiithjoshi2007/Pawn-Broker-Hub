@@ -78,7 +78,7 @@ export default function Login() {
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel className="text-foreground/80 font-medium">Password</FormLabel>
-                    <a href="#" className="text-sm text-sidebar-primary hover:text-sidebar-primary/80 transition-colors font-medium">Forgot password?</a>
+                    <span className="text-sm text-muted-foreground" title="Contact your administrator to reset your password">Forgot password? Contact admin</span>
                   </div>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" className="h-12 bg-muted/50 border-border/50 focus-visible:ring-sidebar-primary/50" {...field} />

@@ -216,12 +216,33 @@ router.get("/loans/:id", requireAuth, async (req, res) => {
 router.patch("/loans/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
+    const { status, notes, penaltyRate, dueDate } = req.body;
+
+    const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
+    if (status !== undefined) updatePayload.status = status;
+    if (notes !== undefined) updatePayload.notes = notes;
+    if (penaltyRate !== undefined) updatePayload.penaltyRate = penaltyRate;
+    if (dueDate !== undefined) {
+      updatePayload.dueDate = dueDate;
+      // Auto-extend expiry date to 1 month after new due date
+      const dueDateObj = new Date(dueDate);
+      const expiry = addMonths(dueDateObj, 1);
+      updatePayload.expiryDate = format(expiry, "yyyy-MM-dd");
+    }
+
     const [updated] = await db.update(loansTable)
-      .set({ status: req.body.status, notes: req.body.notes, penaltyRate: req.body.penaltyRate, updatedAt: new Date() })
+      .set(updatePayload as any)
       .where(eq(loansTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Loan not found" });
-    return res.json({ ...updated, customerName: null });
+
+    // Fetch customer name to include in response
+    const customer = await db.select({ name: customersTable.name })
+      .from(customersTable)
+      .where(eq(customersTable.id, updated.customerId))
+      .limit(1);
+
+    return res.json({ ...updated, customerName: customer[0]?.name || null });
   } catch (err) {
     req.log.error({ err }, "Update loan error");
     return res.status(500).json({ error: "Internal server error" });

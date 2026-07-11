@@ -83,33 +83,67 @@ router.post("/auth/logout", (req, res) => {
   }
 });
 
-// PATCH /auth/me — change own password
+// PATCH /auth/me — update profile info and/or change password
 router.patch("/auth/me", requireAuth, async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: "currentPassword and newPassword are required" });
-    }
-    if (typeof newPassword === "string" && newPassword.length < 8) {
-      return res.status(400).json({ error: "New password must be at least 8 characters" });
-    }
-
     const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     const user = users[0];
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) return res.status(400).json({ error: "Current password is incorrect" });
+    const { name, email, currentPassword, newPassword } = req.body;
+    const profileUpdate: Record<string, unknown> = {};
+    let passwordChanged = false;
 
-    const newHash = await bcrypt.hash(newPassword, 10);
-    await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, userId));
+    // Profile fields
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "Name must be at least 2 characters" });
+      }
+      profileUpdate.name = name.trim();
+    }
+    if (email !== undefined) {
+      if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "Invalid email address" });
+      }
+      profileUpdate.email = email.toLowerCase().trim();
+    }
 
-    return res.json({ message: "Password updated successfully" });
+    // Password change (optional — only if both fields provided)
+    if (currentPassword || newPassword) {
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Both currentPassword and newPassword are required to change password" });
+      }
+      if (typeof newPassword === "string" && newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters" });
+      }
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) return res.status(400).json({ error: "Current password is incorrect" });
+      profileUpdate.passwordHash = await bcrypt.hash(newPassword, 10);
+      passwordChanged = true;
+    }
+
+    if (Object.keys(profileUpdate).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const [updated] = await db.update(usersTable)
+      .set(profileUpdate as any)
+      .where(eq(usersTable.id, userId))
+      .returning();
+
+    // Update session if name/email changed
+    if (profileUpdate.name) req.session.userName = updated.name;
+    if (profileUpdate.email) req.session.userEmail = updated.email;
+
+    return res.json({
+      message: passwordChanged ? "Profile and password updated successfully" : "Profile updated successfully",
+      user: { id: updated.id, email: updated.email, name: updated.name, role: updated.role },
+    });
   } catch (err) {
-    req.log.error({ err }, "Change password error");
+    req.log.error({ err }, "Update profile error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
