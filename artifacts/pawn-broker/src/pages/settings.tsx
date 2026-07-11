@@ -127,7 +127,7 @@ export default function Settings() {
         <p className="text-muted-foreground mt-1">Manage your account and preferences.</p>
       </div>
 
-      {/* Profile Info */}
+      {/* Profile Info / Edit */}
       <Card className="shadow-sm border-border/50">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">

@@ -108,6 +108,12 @@ router.patch("/auth/me", requireAuth, async (req, res) => {
       if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ error: "Invalid email address" });
       }
+      // Check uniqueness
+      const existing = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
+      if (existing[0] && existing[0].id !== userId) {
+        return res.status(409).json({ error: "Email already in use" });
+      }
       profileUpdate.email = email.toLowerCase().trim();
     }
 
@@ -129,14 +135,16 @@ router.patch("/auth/me", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    profileUpdate.updatedAt = new Date();
+
     const [updated] = await db.update(usersTable)
       .set(profileUpdate as any)
       .where(eq(usersTable.id, userId))
       .returning();
 
     // Update session if name/email changed
-    if (profileUpdate.name) req.session.userName = updated.name;
-    if (profileUpdate.email) req.session.userEmail = updated.email;
+    if (profileUpdate.name && req.session) req.session.userName = updated.name;
+    if (profileUpdate.email && req.session) req.session.userEmail = updated.email;
 
     return res.json({
       message: passwordChanged ? "Profile and password updated successfully" : "Profile updated successfully",
