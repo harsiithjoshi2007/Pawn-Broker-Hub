@@ -181,7 +181,7 @@ export default function Reports() {
                         <TableRow key={payment.id} className="hover:bg-muted/20">
                           <TableCell className="pl-6 text-sm">{formatIndianDate(payment.paymentDate)}</TableCell>
                           <TableCell className="font-mono text-xs text-muted-foreground">{payment.receiptNumber}</TableCell>
-                          <TableCell className="font-mono text-xs">{(payment as any).loanNumber || `#${payment.loanId}`}</TableCell>
+                          <TableCell className="font-mono text-xs">{payment.loanNumber || `#${payment.loanId}`}</TableCell>
                           <TableCell>
                             <span className="uppercase text-[10px] font-medium px-2 py-0.5 bg-muted rounded border border-border">
                               {payment.paymentMode.replace('_', ' ')}

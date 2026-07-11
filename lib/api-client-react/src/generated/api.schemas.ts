@@ -275,6 +275,10 @@ export interface Payment {
   /** @nullable */
   notes?: string | null;
   createdAt: string;
+  /** Populated when fetched via list endpoint (joined from loans table) */
+  loanNumber?: string | null;
+  /** Populated when fetched via list endpoint (joined from customers table) */
+  customerName?: string | null;
 }
 
 export interface LoanDetail {

@@ -71,7 +71,7 @@ export default function Notifications() {
                     <div>
                       <p className="font-mono text-sm font-semibold">{loan.loanNumber}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(loan as any).customerName ?? `Customer #${loan.customerId}`} · Due {formatIndianDate(loan.dueDate)}
+                        {loan.customerName ?? `Customer #${loan.customerId}`} · Due {formatIndianDate(loan.dueDate)}
                       </p>
                     </div>
                   </div>
@@ -114,7 +114,7 @@ export default function Notifications() {
             <p className="text-center py-6 text-muted-foreground">No payments recorded yet.</p>
           ) : (
             <div className="space-y-2">
-              {recentPayments.data.map((p: any) => (
+              {recentPayments.data.map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
                   <div className="flex items-center gap-3">
                     <CreditCard className="h-4 w-4 text-accent shrink-0" />

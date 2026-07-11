@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useListCustomers, useCreateLoan, useGetCustomer, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
+import { useListCustomers, useCreateLoan, useGetCustomer, getGetCustomerQueryKey, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -70,9 +70,13 @@ export default function NewLoan() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   // Auto-load customer from URL param (e.g. coming from customer detail page)
-  const { data: urlCustomer } = useGetCustomer(urlParams.customerId ?? 0, {
-    query: { enabled: !!urlParams.customerId }
-  } as any);
+  const urlCustomerId = urlParams.customerId ?? 0;
+  const { data: urlCustomer } = useGetCustomer(urlCustomerId, {
+    query: {
+      queryKey: getGetCustomerQueryKey(urlCustomerId),
+      enabled: !!urlParams.customerId,
+    },
+  });
 
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomers(
     { search: customerSearch, limit: 5 },
