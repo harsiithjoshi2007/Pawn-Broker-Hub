@@ -83,6 +83,37 @@ router.post("/auth/logout", (req, res) => {
   }
 });
 
+// PATCH /auth/me — change own password
+router.patch("/auth/me", requireAuth, async (req, res) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "currentPassword and newPassword are required" });
+    }
+    if (typeof newPassword === "string" && newPassword.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+
+    const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const user = users[0];
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(400).json({ error: "Current password is incorrect" });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, userId));
+
+    return res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    req.log.error({ err }, "Change password error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /auth/me
 router.get("/auth/me", requireAuth, async (req, res) => {
   try {

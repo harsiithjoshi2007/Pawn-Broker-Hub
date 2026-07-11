@@ -539,6 +539,11 @@ limit?: number;
 
 export type ListPaymentsParams = {
 loanId?: number;
+customerId?: number;
+search?: string;
+mode?: string;
+from?: string;
+to?: string;
 page?: number;
 limit?: number;
 };

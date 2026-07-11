@@ -19,6 +19,8 @@ import LoanDetail from '@/pages/loans/[id]';
 import Payments from '@/pages/payments';
 import Calculator from '@/pages/calculator';
 import Reports from '@/pages/reports';
+import Settings from '@/pages/settings';
+import Notifications from '@/pages/notifications';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +55,8 @@ function Router() {
             <Route path="/payments" component={Payments} />
             <Route path="/calculator" component={Calculator} />
             <Route path="/reports" component={Reports} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/notifications" component={Notifications} />
             <Route component={NotFound} />
           </Switch>
         </AppLayout>

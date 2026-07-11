@@ -3,12 +3,13 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { 
   LayoutDashboard, Users, FileText, CreditCard, 
-  BarChart3, Calculator, Bell, Settings, LogOut, Diamond, Menu, Moon, Sun, Search
+  BarChart3, Calculator, Bell, Settings, LogOut, Diamond, Menu, Moon, Sun
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+import { GlobalSearch } from "@/components/GlobalSearch";
+import { useListLoans } from "@workspace/api-client-react";
 
 function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
   const [location] = useLocation();
@@ -25,6 +26,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { theme, setTheme } = useTheme();
+
+  // Fetch overdue count for notification badge
+  const { data: overdueData } = useListLoans({ status: "overdue", limit: 1 });
+  const overdueCount = overdueData?.total ?? 0;
 
   useEffect(() => {
     if (!user) {
@@ -84,23 +89,33 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search customers or loans..." className="w-full pl-9 bg-muted/50 border-transparent focus-visible:ring-1 focus-visible:ring-primary shadow-inner" />
-          </div>
+          <GlobalSearch />
 
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground transition-colors" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground transition-colors">
-              <Settings className="h-5 w-5" />
-            </Button>
+
+            <Link href="/notifications">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative transition-colors">
+                <Bell className="h-5 w-5" />
+                {overdueCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+                )}
+              </Button>
+            </Link>
+
+            <Link href="/settings">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </header>
 

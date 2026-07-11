@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetCustomer, useListLoans, getGetCustomerQueryKey } from "@workspace/api-client-react";
+import { useGetCustomer, useListLoans, useListPayments, getGetCustomerQueryKey } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Edit, FileText, Phone, Mail, MapPin, Calendar, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Phone, Mail, MapPin, Calendar, CreditCard, Plus, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomerDetail() {
@@ -234,23 +234,81 @@ export default function CustomerDetail() {
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
-          <Card className="shadow-sm border-border/50">
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-              <CardDescription>Recent payments made by this customer</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>View payments within individual loan details</p>
-              </div>
-            </CardContent>
-          </Card>
+          <CustomerPayments customerId={customerId} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-// Needed to avoid importing from non-existent lucide icon User (already imported above but not all are correct)
-import { User } from "lucide-react";
+// ── Customer payments sub-component ──────────────────────────────────────────
+
+function CustomerPayments({ customerId }: { customerId: number }) {
+  const { data: paymentsData, isLoading } = useListPayments({ customerId, limit: 50 });
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm border-border/50">
+        <CardContent className="pt-6 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const payments = (paymentsData?.data ?? []) as any[];
+
+  return (
+    <Card className="shadow-sm border-border/50">
+      <CardHeader>
+        <CardTitle>Payment History</CardTitle>
+        <CardDescription>All payments made across this customer's loans.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {payments.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No payments found for this customer.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="pl-6">Receipt No.</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Loan No.</TableHead>
+                  <TableHead>Mode</TableHead>
+                  <TableHead className="text-right">Interest</TableHead>
+                  <TableHead className="text-right">Principal</TableHead>
+                  <TableHead className="text-right pr-6 font-bold">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((p) => (
+                  <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell className="pl-6 font-mono text-xs text-muted-foreground">{p.receiptNumber}</TableCell>
+                    <TableCell className="text-sm">{formatIndianDate(p.paymentDate)}</TableCell>
+                    <TableCell>
+                      <Link href={`/loans/${p.loanId}`} className="font-mono text-xs text-primary hover:underline">
+                        {p.loanNumber ?? `#${p.loanId}`}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                        {p.paymentMode.replace("_", " ")}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm text-muted-foreground">{formatCurrency(p.interestPaid)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm text-muted-foreground">{formatCurrency(p.principalPaid)}</TableCell>
+                    <TableCell className="text-right pr-6 font-mono text-sm font-bold text-accent">{formatCurrency(p.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
