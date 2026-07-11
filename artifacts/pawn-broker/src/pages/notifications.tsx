@@ -9,11 +9,34 @@ import { AlertCircle, CreditCard, FileText, Bell, CheckCircle2, MessageSquare, L
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
+/** Parse a Twilio error message and return an actionable hint, or null. */
+function twilioHint(reason: string): { message: string; link?: string; linkLabel?: string } | null {
+  if (/unverified/i.test(reason)) {
+    return {
+      message: "Twilio trial accounts can only send to verified numbers.",
+      link: "https://console.twilio.com/us1/develop/phone-numbers/manage/verified-caller-ids",
+      linkLabel: "Verify a number in Twilio →",
+    };
+  }
+  if (/invalid.*from|invalid.*caller/i.test(reason)) {
+    return {
+      message: 'The "From" number is not a Twilio number. Go to Settings → Shop & Messaging and enter your Twilio-assigned number.',
+    };
+  }
+  if (/account.*sid|auth.*token|authentication/i.test(reason)) {
+    return {
+      message: "Twilio credentials are wrong. Check Account SID and Auth Token in Settings → Shop & Messaging.",
+    };
+  }
+  return null;
+}
+
 export default function Notifications() {
   const { toast } = useToast();
   const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
   const [sendingIds, setSendingIds] = useState<Set<number>>(new Set());
   const [sendingAll, setSendingAll] = useState(false);
+  const [sendBanner, setSendBanner] = useState<{ type: "success" | "error"; text: string; hint: ReturnType<typeof twilioHint> } | null>(null);
 
   const { data: overdueLoans, isLoading: loadingOverdue } = useListLoans({ status: "overdue", limit: 20 });
   const { data: recentPayments, isLoading: loadingPayments } = useListPayments({ limit: 10 });
@@ -23,6 +46,7 @@ export default function Notifications() {
 
   const sendReminder = async (loanId: number) => {
     setSendingIds(prev => new Set([...prev, loanId]));
+    setSendBanner(null);
     try {
       const res = await fetch(`/api/messages/send/${loanId}`, {
         method: "POST",
@@ -32,12 +56,9 @@ export default function Notifications() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
-      toast({
-        title: "Reminder Sent ✓",
-        description: `${channel === "whatsapp" ? "WhatsApp" : "SMS"} sent to ${data.to}`,
-      });
+      setSendBanner({ type: "success", text: `Reminder sent to ${data.to}`, hint: null });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Send Failed", description: e.message });
+      setSendBanner({ type: "error", text: e.message, hint: twilioHint(e.message) });
     } finally {
       setSendingIds(prev => { const n = new Set(prev); n.delete(loanId); return n; });
     }
@@ -45,6 +66,7 @@ export default function Notifications() {
 
   const sendAllReminders = async () => {
     setSendingAll(true);
+    setSendBanner(null);
     try {
       const res = await fetch("/api/messages/send-overdue", {
         method: "POST",
@@ -55,14 +77,15 @@ export default function Notifications() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
       const failedItem = data.results?.find((r: any) => r.status === "failed" || r.status === "skipped");
-      const failReason = failedItem?.reason ? ` (${failedItem.reason})` : "";
-      toast({
-        title: data.sent > 0 ? "Reminders Sent" : "Send Failed",
-        description: `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.${failReason}`,
-        variant: data.sent === 0 && data.failed > 0 ? "destructive" : "default",
-      });
+      const failReason: string = failedItem?.reason ?? "";
+      if (data.sent > 0 && data.failed === 0) {
+        setSendBanner({ type: "success", text: `${data.sent} reminder${data.sent !== 1 ? "s" : ""} sent successfully.`, hint: null });
+      } else {
+        const summary = `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.`;
+        setSendBanner({ type: "error", text: failReason ? `${summary} — ${failReason}` : summary, hint: twilioHint(failReason) });
+      }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Send Failed", description: e.message });
+      setSendBanner({ type: "error", text: e.message, hint: twilioHint(e.message) });
     } finally {
       setSendingAll(false);
     }
@@ -144,6 +167,32 @@ export default function Notifications() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Send result banner */}
+          {sendBanner && (
+            <div className={`mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${
+              sendBanner.type === "success"
+                ? "border-green-400/50 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+                : "border-destructive/40 bg-destructive/5 text-destructive"
+            }`}>
+              <span className="mt-0.5 shrink-0">{sendBanner.type === "success" ? "✓" : "✗"}</span>
+              <div className="flex-1 space-y-1">
+                <p>{sendBanner.text}</p>
+                {sendBanner.hint && (
+                  <p className="text-xs opacity-80">
+                    {sendBanner.hint.message}
+                    {sendBanner.hint.link && (
+                      <> <a href={sendBanner.hint.link} target="_blank" rel="noopener noreferrer"
+                          className="font-semibold underline underline-offset-2 hover:opacity-70">
+                          {sendBanner.hint.linkLabel}
+                        </a></>
+                    )}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setSendBanner(null)} className="shrink-0 opacity-50 hover:opacity-100 leading-none">✕</button>
+            </div>
+          )}
+
           {loadingOverdue ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
