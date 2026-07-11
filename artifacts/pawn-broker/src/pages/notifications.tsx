@@ -5,87 +5,83 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
-import { AlertCircle, CreditCard, FileText, Bell, CheckCircle2, MessageSquare, Loader2, Send } from "lucide-react";
+import { AlertCircle, CreditCard, FileText, Bell, CheckCircle2, MessageSquare, Loader2, Send, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-
-/** Parse a Twilio error message and return an actionable hint, or null. */
-function twilioHint(reason: string): { message: string; link?: string; linkLabel?: string } | null {
-  if (/unverified/i.test(reason)) {
-    return {
-      message: "Twilio trial accounts can only send to verified numbers.",
-      link: "https://console.twilio.com/us1/develop/phone-numbers/manage/verified-caller-ids",
-      linkLabel: "Verify a number in Twilio →",
-    };
-  }
-  if (/invalid.*from|invalid.*caller/i.test(reason)) {
-    return {
-      message: 'The "From" number is not a Twilio number. Go to Settings → Shop & Messaging and enter your Twilio-assigned number.',
-    };
-  }
-  if (/account.*sid|auth.*token|authentication/i.test(reason)) {
-    return {
-      message: "Twilio credentials are wrong. Check Account SID and Auth Token in Settings → Shop & Messaging.",
-    };
-  }
-  return null;
-}
 
 export default function Notifications() {
   const { toast } = useToast();
   const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
-  const [sendingIds, setSendingIds] = useState<Set<number>>(new Set());
-  const [sendingAll, setSendingAll] = useState(false);
-  const [sendBanner, setSendBanner] = useState<{ type: "success" | "error"; text: string; hint: ReturnType<typeof twilioHint> } | null>(null);
+  const [sendingIds, setSendingIds]   = useState<Set<number>>(new Set());
+  const [sendingAll, setSendingAll]   = useState(false);
+  const [sendBanner, setSendBanner]   = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // WhatsApp "Send All" — list of wa.me links shown for manual sending
+  const [waLinks, setWaLinks] = useState<{ loanNumber: string; customerName: string; waLink: string; skipped?: boolean }[]>([]);
+  const [showWaDialog, setShowWaDialog] = useState(false);
 
-  const { data: overdueLoans, isLoading: loadingOverdue } = useListLoans({ status: "overdue", limit: 20 });
-  const { data: recentPayments, isLoading: loadingPayments } = useListPayments({ limit: 10 });
-  const { data: recentLoans, isLoading: loadingLoans } = useListLoans({ limit: 10 });
+  const { data: overdueLoans,   isLoading: loadingOverdue   } = useListLoans({ status: "overdue", limit: 20 });
+  const { data: recentPayments, isLoading: loadingPayments  } = useListPayments({ limit: 10 });
+  const { data: recentLoans,    isLoading: loadingLoans     } = useListLoans({ limit: 10 });
 
   const overdueCount = overdueLoans?.total ?? 0;
 
+  // ── Individual Remind button ───────────────────────────────────────────────
   const sendReminder = async (loanId: number) => {
     setSendingIds(prev => new Set([...prev, loanId]));
     setSendBanner(null);
     try {
-      const res = await fetch(`/api/messages/send/${loanId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch(`/api/messages/send/${loanId}`, {
+        method:      "POST",
+        headers:     { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ channel }),
+        body:        JSON.stringify({ channel }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
-      setSendBanner({ type: "success", text: `Reminder sent to ${data.to}`, hint: null });
+
+      if (channel === "whatsapp" && data.waLink) {
+        // Open WhatsApp in a new tab — message is pre-filled, staff just taps Send
+        window.open(data.waLink, "_blank", "noopener,noreferrer");
+        setSendBanner({ type: "success", text: "WhatsApp opened with message pre-filled — just tap Send." });
+      } else {
+        setSendBanner({ type: "success", text: `SMS sent to ${data.to}` });
+      }
     } catch (e: any) {
-      setSendBanner({ type: "error", text: e.message, hint: twilioHint(e.message) });
+      setSendBanner({ type: "error", text: e.message });
     } finally {
       setSendingIds(prev => { const n = new Set(prev); n.delete(loanId); return n; });
     }
   };
 
+  // ── Send All ───────────────────────────────────────────────────────────────
   const sendAllReminders = async () => {
     setSendingAll(true);
     setSendBanner(null);
     try {
-      const res = await fetch("/api/messages/send-overdue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch("/api/messages/send-overdue", {
+        method:      "POST",
+        headers:     { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ channel }),
+        body:        JSON.stringify({ channel }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
-      const failedItem = data.results?.find((r: any) => r.status === "failed" || r.status === "skipped");
-      const failReason: string = failedItem?.reason ?? "";
-      if (data.sent > 0 && data.failed === 0) {
-        setSendBanner({ type: "success", text: `${data.sent} reminder${data.sent !== 1 ? "s" : ""} sent successfully.`, hint: null });
+
+      if (data.whatsapp) {
+        // Show a dialog listing all wa.me links for staff to open one by one
+        setWaLinks(data.waLinks ?? []);
+        setShowWaDialog(true);
       } else {
-        const summary = `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.`;
-        setSendBanner({ type: "error", text: failReason ? `${summary} — ${failReason}` : summary, hint: twilioHint(failReason) });
+        if (data.sent > 0 && data.failed === 0) {
+          setSendBanner({ type: "success", text: `${data.sent} SMS reminder${data.sent !== 1 ? "s" : ""} sent successfully.` });
+        } else {
+          const failedItem = data.results?.find((r: any) => r.status === "failed" || r.status === "skipped");
+          const failReason = failedItem?.reason ? ` — ${failedItem.reason}` : "";
+          setSendBanner({ type: "error", text: `${data.sent} sent · ${data.failed} failed out of ${data.total} loans.${failReason}` });
+        }
       }
     } catch (e: any) {
-      setSendBanner({ type: "error", text: e.message, hint: twilioHint(e.message) });
+      setSendBanner({ type: "error", text: e.message });
     } finally {
       setSendingAll(false);
     }
@@ -109,6 +105,47 @@ export default function Notifications() {
         </div>
       </div>
 
+      {/* WhatsApp "Send All" link list */}
+      {showWaDialog && (
+        <Card className="shadow-sm border-green-400/40 bg-green-50/50 dark:bg-green-900/10">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base text-green-800 dark:text-green-300 flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                WhatsApp Reminders — Open each link to send
+              </CardTitle>
+              <button onClick={() => setShowWaDialog(false)} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
+            </div>
+            <CardDescription>
+              WhatsApp opens with the message pre-filled. Just tap <strong>Send</strong> in WhatsApp for each customer.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {waLinks.map((item, i) => (
+                <div key={i} className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${item.skipped ? "opacity-50 border-border" : "border-green-300/60 bg-background"}`}>
+                  <div>
+                    <span className="font-mono font-semibold">{item.loanNumber}</span>
+                    <span className="ml-2 text-muted-foreground">{item.customerName ?? "Unknown"}</span>
+                    {item.skipped && <span className="ml-2 text-xs text-destructive">No phone — skipped</span>}
+                  </div>
+                  {!item.skipped && (
+                    <a
+                      href={item.waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400 underline underline-offset-2 hover:opacity-70"
+                    >
+                      Open WhatsApp <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Overdue Loans + Messaging */}
       <Card className="shadow-sm border-destructive/30 bg-destructive/5">
         <CardHeader className="pb-3">
@@ -120,7 +157,7 @@ export default function Notifications() {
                 {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
               </CardTitle>
               <CardDescription className="mt-1">
-                Send SMS or WhatsApp payment reminders to overdue customers.
+                Send SMS (Fast2SMS) or WhatsApp reminders to overdue customers.
               </CardDescription>
             </div>
 
@@ -158,7 +195,7 @@ export default function Notifications() {
                   className="bg-destructive/90 hover:bg-destructive text-white h-8"
                 >
                   {sendingAll
-                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Sending…</>
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Loading…</>
                     : <><Send className="h-3.5 w-3.5 mr-1.5" /> Send All ({overdueCount})</>
                   }
                 </Button>
@@ -167,7 +204,7 @@ export default function Notifications() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Send result banner */}
+          {/* Result banner */}
           {sendBanner && (
             <div className={`mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${
               sendBanner.type === "success"
@@ -175,21 +212,19 @@ export default function Notifications() {
                 : "border-destructive/40 bg-destructive/5 text-destructive"
             }`}>
               <span className="mt-0.5 shrink-0">{sendBanner.type === "success" ? "✓" : "✗"}</span>
-              <div className="flex-1 space-y-1">
-                <p>{sendBanner.text}</p>
-                {sendBanner.hint && (
-                  <p className="text-xs opacity-80">
-                    {sendBanner.hint.message}
-                    {sendBanner.hint.link && (
-                      <> <a href={sendBanner.hint.link} target="_blank" rel="noopener noreferrer"
-                          className="font-semibold underline underline-offset-2 hover:opacity-70">
-                          {sendBanner.hint.linkLabel}
-                        </a></>
-                    )}
-                  </p>
-                )}
-              </div>
+              <p className="flex-1">{sendBanner.text}</p>
               <button onClick={() => setSendBanner(null)} className="shrink-0 opacity-50 hover:opacity-100 leading-none">✕</button>
+            </div>
+          )}
+
+          {/* WhatsApp note */}
+          {channel === "whatsapp" && (
+            <div className="mb-4 rounded-md border border-green-300/50 bg-green-50/60 dark:bg-green-900/10 px-3 py-2 text-xs text-green-800 dark:text-green-300 flex gap-2">
+              <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                WhatsApp uses <strong>wa.me deep links</strong> — free, no API key needed.
+                Clicking Remind opens WhatsApp with the message pre-filled; you just tap Send.
+              </span>
             </div>
           )}
 
@@ -232,7 +267,9 @@ export default function Notifications() {
                     >
                       {sendingIds.has(loan.id)
                         ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <><Send className="h-3 w-3" /> Remind</>
+                        : channel === "whatsapp"
+                          ? <><ExternalLink className="h-3 w-3" /> WhatsApp</>
+                          : <><Send className="h-3 w-3" /> Remind</>
                       }
                     </Button>
                     <Button variant="outline" size="sm" asChild

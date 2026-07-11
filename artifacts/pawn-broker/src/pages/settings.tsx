@@ -13,14 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Shield, Loader2, CheckCircle2, Mail, Pencil, X, Save, Building2, MessageSquare } from "lucide-react";
 
 interface ShopSettingsForm {
-  shopName: string;
-  shopPhone: string;
-  shopAddress: string;
+  shopName:       string;
+  shopPhone:      string;
+  shopAddress:    string;
   fast2smsApiKey: string;
-  twilioAccountSid: string;
-  twilioAuthToken: string;
-  twilioFromNumber: string;
-  twilioWhatsappEnabled: boolean;
 }
 
 export default function Settings() {
@@ -34,7 +30,7 @@ export default function Settings() {
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [isSavingShop, setIsSavingShop] = useState(false);
   const [shopForm, setShopForm] = useState<ShopSettingsForm>({
-    shopName: "", shopPhone: "", shopAddress: "", fast2smsApiKey: "", twilioAccountSid: "", twilioAuthToken: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
+    shopName: "", shopPhone: "", shopAddress: "", fast2smsApiKey: "",
   });
 
   useEffect(() => {
@@ -46,14 +42,10 @@ export default function Settings() {
 
   const startEditShop = () => {
     setShopForm({
-      shopName:              shopSettings?.shopName                   || "",
-      shopPhone:             shopSettings?.shopPhone                  || "",
-      shopAddress:           shopSettings?.shopAddress                || "",
-      fast2smsApiKey:        (shopSettings as any)?.fast2smsApiKey    || "",
-      twilioAccountSid:      (shopSettings as any)?.twilioAccountSid  || "",
-      twilioAuthToken:       (shopSettings as any)?.twilioAuthToken    || "",
-      twilioFromNumber:      shopSettings?.twilioFromNumber            || "",
-      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled       || false,
+      shopName:       shopSettings?.shopName                || "",
+      shopPhone:      shopSettings?.shopPhone               || "",
+      shopAddress:    shopSettings?.shopAddress             || "",
+      fast2smsApiKey: (shopSettings as any)?.fast2smsApiKey || "",
     });
     setIsEditingShop(true);
   };
@@ -314,7 +306,7 @@ export default function Settings() {
             )}
           </div>
           <CardDescription>
-            Shop info included in reminder messages. Configure your Twilio number to send SMS/WhatsApp alerts.
+            Shop info included in reminder messages. Add your Fast2SMS key below to enable SMS alerts.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -360,9 +352,9 @@ export default function Settings() {
                   <MessageSquare className="h-3.5 w-3.5" /> Fast2SMS — Recommended for India
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Send SMS to <strong>any Indian number</strong> — no per-number verification, no Twilio trial restrictions.
+                  Send SMS to <strong>any Indian number</strong> — no per-number verification, no restrictions.
                   Sign up free at <strong>fast2sms.com</strong> → Dashboard → Dev API → copy your API key.
-                  If this key is set, Fast2SMS is used automatically; Twilio is only a fallback.
+                  WhatsApp reminders use free wa.me links — no API key needed for WhatsApp.
                 </p>
                 <div className="space-y-2">
                   <Label>Fast2SMS API Key</Label>
@@ -374,73 +366,6 @@ export default function Settings() {
                     className="font-mono text-sm"
                   />
                 </div>
-              </div>
-              <Separator />
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" /> Twilio (optional — for WhatsApp or international SMS)
-              </p>
-              <div className="space-y-2">
-                <Label>Twilio Account SID <span className="text-destructive">*</span></Label>
-                <Input
-                  value={shopForm.twilioAccountSid}
-                  onChange={e => setShopForm(f => ({ ...f, twilioAccountSid: e.target.value }))}
-                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Found on your <strong>Twilio Console</strong> dashboard (starts with AC…).
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>Twilio Auth Token <span className="text-destructive">*</span></Label>
-                <Input
-                  value={shopForm.twilioAuthToken}
-                  onChange={e => setShopForm(f => ({ ...f, twilioAuthToken: e.target.value }))}
-                  placeholder="••••••••••••••••••••••••••••••••"
-                  type="password"
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Found below your Account SID on the <strong>Twilio Console</strong> dashboard. Keep this secret.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>Twilio Sender Number <span className="text-destructive">*</span></Label>
-                <Input
-                  value={shopForm.twilioFromNumber}
-                  onChange={e => setShopForm(f => ({ ...f, twilioFromNumber: e.target.value }))}
-                  placeholder="+1XXXXXXXXXX"
-                  className="font-mono"
-                />
-                {/* Warn if it looks like a personal Indian mobile instead of a Twilio number */}
-                {shopForm.twilioFromNumber && /^\+91\d{10}$/.test(shopForm.twilioFromNumber.replace(/\s/g, "")) && (
-                  <div className="flex gap-2 rounded-md border border-yellow-400/50 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-300">
-                    <span className="shrink-0">⚠️</span>
-                    <span>
-                      This looks like a personal Indian mobile number. The <strong>From</strong> number must be a
-                      Twilio-purchased number (shown in{" "}
-                      <strong>Twilio Console → Phone Numbers → Manage → Active Numbers</strong>), not your own number.
-                    </span>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  This is your <strong>Twilio-assigned</strong> phone number — find it in{" "}
-                  <strong>Twilio Console → Phone Numbers → Manage → Active Numbers</strong>.
-                  It is <em>not</em> your personal number.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="whatsapp-toggle"
-                  checked={shopForm.twilioWhatsappEnabled}
-                  onChange={e => setShopForm(f => ({ ...f, twilioWhatsappEnabled: e.target.checked }))}
-                  className="h-4 w-4 accent-sidebar-primary cursor-pointer"
-                />
-                <Label htmlFor="whatsapp-toggle" className="cursor-pointer font-normal">
-                  Enable WhatsApp reminders{" "}
-                  <span className="text-xs text-muted-foreground">(sends with whatsapp: prefix on the same number)</span>
-                </Label>
               </div>
               <div className="flex gap-2 pt-2">
                 <Button
@@ -479,30 +404,8 @@ export default function Settings() {
                   )}
                 </Label>
                 <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.fast2smsApiKey ? "text-muted-foreground italic" : ""}`}>
-                  {(shopSettings as any)?.fast2smsApiKey ? "••••••••••••••••••••••••" : "Not configured — SMS will use Twilio"}
+                  {(shopSettings as any)?.fast2smsApiKey ? "••••••••••••••••••••••••" : "Not configured — add key to enable SMS"}
                 </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Account SID</Label>
-                <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.twilioAccountSid ? "text-muted-foreground italic" : ""}`}>
-                  {(shopSettings as any)?.twilioAccountSid ? "AC••••••••••••••••••••••••••••••••" : "Not configured"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Auth Token</Label>
-                <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.twilioAuthToken ? "text-muted-foreground italic" : ""}`}>
-                  {(shopSettings as any)?.twilioAuthToken ? "••••••••••••••••••••••••••••••••" : "Not configured"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio SMS Number</Label>
-                <p className={`mt-1 font-mono font-medium ${!shopSettings?.twilioFromNumber ? "text-muted-foreground italic" : ""}`}>
-                  {shopSettings?.twilioFromNumber || "Not configured"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">WhatsApp</Label>
-                <p className="mt-1 font-medium">{shopSettings?.twilioWhatsappEnabled ? "✓ Enabled" : "Disabled"}</p>
               </div>
             </div>
           )}

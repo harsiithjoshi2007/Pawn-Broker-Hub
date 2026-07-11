@@ -12,13 +12,9 @@ router.get("/shop-settings", requireAuth, async (req, res) => {
     const rows = await db.select().from(shopSettingsTable).limit(1);
     if (!rows[0]) {
       return res.json({
-        shopName: "GoldVault Pawn Broker",
-        shopPhone: null,
-        shopAddress: null,
-        twilioAccountSid: null,
-        twilioAuthToken: null,
-        twilioFromNumber: null,
-        twilioWhatsappEnabled: false,
+        shopName:       "GoldVault Pawn Broker",
+        shopPhone:      null,
+        shopAddress:    null,
         fast2smsApiKey: null,
       });
     }
@@ -32,16 +28,7 @@ router.get("/shop-settings", requireAuth, async (req, res) => {
 // PUT /shop-settings
 router.put("/shop-settings", requireAuth, async (req, res) => {
   try {
-    const {
-      shopName,
-      shopPhone,
-      shopAddress,
-      twilioAccountSid,
-      twilioAuthToken,
-      twilioFromNumber,
-      twilioWhatsappEnabled,
-      fast2smsApiKey,
-    } = req.body;
+    const { shopName, shopPhone, shopAddress, fast2smsApiKey } = req.body;
 
     const existing = await db.select().from(shopSettingsTable).limit(1);
 
@@ -49,14 +36,10 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
       const [updated] = await db
         .update(shopSettingsTable)
         .set({
-          ...(shopName              !== undefined && { shopName }),
-          ...(shopPhone             !== undefined && { shopPhone:             shopPhone || null }),
-          ...(shopAddress           !== undefined && { shopAddress:           shopAddress || null }),
-          ...(twilioAccountSid      !== undefined && { twilioAccountSid:      twilioAccountSid || null }),
-          ...(twilioAuthToken       !== undefined && { twilioAuthToken:       twilioAuthToken || null }),
-          ...(twilioFromNumber      !== undefined && { twilioFromNumber:      twilioFromNumber || null }),
-          ...(twilioWhatsappEnabled !== undefined && { twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled) }),
-          ...(fast2smsApiKey       !== undefined && { fast2smsApiKey:       fast2smsApiKey || null }),
+          ...(shopName       !== undefined && { shopName }),
+          ...(shopPhone      !== undefined && { shopPhone:      shopPhone      || null }),
+          ...(shopAddress    !== undefined && { shopAddress:    shopAddress    || null }),
+          ...(fast2smsApiKey !== undefined && { fast2smsApiKey: fast2smsApiKey || null }),
           updatedAt: new Date(),
         })
         .where(eq(shopSettingsTable.id, existing[0].id))
@@ -67,14 +50,10 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
     const [created] = await db
       .insert(shopSettingsTable)
       .values({
-        shopName:              shopName         || "GoldVault Pawn Broker",
-        shopPhone:             shopPhone        || null,
-        shopAddress:           shopAddress      || null,
-        twilioAccountSid:      twilioAccountSid || null,
-        twilioAuthToken:       twilioAuthToken  || null,
-        twilioFromNumber:      twilioFromNumber || null,
-        twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled),
-        fast2smsApiKey:        fast2smsApiKey  || null,
+        shopName:       shopName       || "GoldVault Pawn Broker",
+        shopPhone:      shopPhone      || null,
+        shopAddress:    shopAddress    || null,
+        fast2smsApiKey: fast2smsApiKey || null,
       })
       .returning();
     return res.json(created);
