@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useGetCustomer, useListLoans, useListPayments, getGetCustomerQueryKey } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useGetCustomer, useListLoans, useListPayments, useDeleteCustomer, getGetCustomerQueryKey, getListCustomersQueryKey } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +9,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Edit, FileText, Phone, Mail, MapPin, Calendar, CreditCard, Plus, User } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Phone, CreditCard, Plus, User, Trash2, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomerDetail() {
   const { id } = useParams();
   const customerId = parseInt(id || "0", 10);
-  
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: customer, isLoading: isLoadingCustomer } = useGetCustomer(customerId);
   const { data: loansData, isLoading: isLoadingLoans } = useListLoans({ customerId, limit: 50 });
+
+  const deleteCustomer = useDeleteCustomer();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      await deleteCustomer.mutateAsync({ id: customerId });
+      toast({ title: "Customer Deleted", description: `${customer?.name} has been removed.` });
+      queryClient.removeQueries({ queryKey: getGetCustomerQueryKey(customerId) });
+      queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() });
+      setLocation("/customers");
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: e.message || "Could not delete customer. They may have active loans.",
+      });
+      setIsDeleteOpen(false);
+    }
+  };
 
   if (isLoadingCustomer) {
     return (
@@ -66,7 +92,7 @@ export default function CustomerDetail() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 ml-14 md:ml-0">
+        <div className="flex flex-wrap gap-2 ml-14 md:ml-0">
           <Button variant="outline" asChild>
             <Link href={`/customers/${customer.id}/edit`}>
               <Edit className="h-4 w-4 mr-2" /> Edit Profile
@@ -77,8 +103,44 @@ export default function CustomerDetail() {
               <Plus className="h-4 w-4 mr-2" /> New Loan
             </Link>
           </Button>
+          <Button
+            variant="outline"
+            className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setIsDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Delete
+          </Button>
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Delete Customer
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{customer.name}</strong>? This will permanently remove their profile.
+              {(customer.activeLoansCount ?? 0) > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  ⚠️ This customer has {customer.activeLoansCount} active loan(s). Delete those loans first.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteCustomer.isPending || (customer.activeLoansCount ?? 0) > 0}
+            >
+              {deleteCustomer.isPending ? "Deleting..." : "Yes, Delete Customer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-md bg-muted/50">

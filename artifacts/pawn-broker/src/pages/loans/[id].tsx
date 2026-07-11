@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useGetLoan, useRecordPayment, useCloseLoan, useRenewLoan, useUpdateLoan, getGetLoanQueryKey, getListLoansQueryKey, getListPaymentsQueryKey } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useGetLoan, useRecordPayment, useCloseLoan, useRenewLoan, useUpdateLoan, useDeleteLoan, getGetLoanQueryKey, getListLoansQueryKey, getListPaymentsQueryKey } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Printer, CreditCard, XCircle, RefreshCw, AlertCircle, FileText, CheckCircle2, ChevronRight, Gem, History, Pencil } from "lucide-react";
+import { ArrowLeft, Printer, CreditCard, XCircle, RefreshCw, AlertCircle, FileText, CheckCircle2, ChevronRight, Gem, History, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 export default function LoanDetail() {
   const { id } = useParams();
   const loanId = parseInt(id || "0", 10);
+  const [, setLocation] = useLocation();
   
   const { data: loan, isLoading } = useGetLoan(loanId);
   const queryClient = useQueryClient();
@@ -28,6 +29,7 @@ export default function LoanDetail() {
   const closeLoan = useCloseLoan();
   const renewLoan = useRenewLoan();
   const updateLoan = useUpdateLoan();
+  const deleteLoan = useDeleteLoan();
 
   // Payment State
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -46,12 +48,28 @@ export default function LoanDetail() {
   const [renewDuration, setRenewDuration] = useState<string>("");
   const [renewDurationUnit, setRenewDurationUnit] = useState<string>("months");
 
+  // Delete Loan State
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
   // Edit Loan State
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editNotes, setEditNotes] = useState<string>("");
   const [editPenaltyRate, setEditPenaltyRate] = useState<string>("");
   const [editDueDate, setEditDueDate] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
+
+  const handleDeleteLoan = async () => {
+    try {
+      await deleteLoan.mutateAsync({ id: loanId });
+      toast({ title: "Loan Deleted", description: `Loan ${loan?.loanNumber} has been permanently deleted.` });
+      queryClient.removeQueries({ queryKey: getGetLoanQueryKey(loanId) });
+      queryClient.invalidateQueries({ queryKey: getListLoansQueryKey() });
+      setLocation("/loans");
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Delete Failed", description: e.message || "Could not delete loan." });
+      setIsDeleteOpen(false);
+    }
+  };
 
   const openEditDialog = () => {
     if (!loan) return;
@@ -203,6 +221,36 @@ export default function LoanDetail() {
           <Button variant="outline" className="print:hidden bg-background" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" /> Print Receipt
           </Button>
+
+          {/* Delete Loan */}
+          <Button
+            variant="outline"
+            className="print:hidden border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setIsDeleteOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Delete
+          </Button>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" /> Delete Loan
+                </DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to permanently delete loan <strong>{loan.loanNumber}</strong>?
+                  This will also remove all associated payments and pledged items. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={handleDeleteLoan} disabled={deleteLoan.isPending}>
+                  {deleteLoan.isPending ? "Deleting..." : "Yes, Delete Loan"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Edit Loan — always available (admin/manager use) */}
           <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

@@ -124,27 +124,37 @@ router.get("/customers/:id", requireAuth, async (req, res) => {
 router.patch("/customers/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
+
+    // Helper: convert empty string to null, leave undefined as-is (Drizzle skips undefined)
+    const nullify = (v: unknown) => (v === "" ? null : v as any);
+
     const [updated] = await db
       .update(customersTable)
       .set({
-        name: req.body.name,
-        dateOfBirth: req.body.dateOfBirth,
-        phone: req.body.phone,
-        whatsapp: req.body.whatsapp,
-        email: req.body.email,
-        aadhaarNumber: req.body.aadhaarNumber,
-        panNumber: req.body.panNumber,
-        address: req.body.address,
-        city: req.body.city,
-        state: req.body.state,
-        pincode: req.body.pincode,
+        ...(req.body.name !== undefined && { name: req.body.name }),
+        ...(req.body.phone !== undefined && { phone: req.body.phone }),
+        ...(req.body.dateOfBirth !== undefined && { dateOfBirth: nullify(req.body.dateOfBirth) }),
+        ...(req.body.whatsapp !== undefined && { whatsapp: nullify(req.body.whatsapp) }),
+        ...(req.body.email !== undefined && { email: nullify(req.body.email) }),
+        ...(req.body.aadhaarNumber !== undefined && { aadhaarNumber: nullify(req.body.aadhaarNumber) }),
+        ...(req.body.panNumber !== undefined && { panNumber: nullify(req.body.panNumber) }),
+        ...(req.body.address !== undefined && { address: nullify(req.body.address) }),
+        ...(req.body.city !== undefined && { city: nullify(req.body.city) }),
+        ...(req.body.state !== undefined && { state: nullify(req.body.state) }),
+        ...(req.body.pincode !== undefined && { pincode: nullify(req.body.pincode) }),
         updatedAt: new Date(),
       })
       .where(eq(customersTable.id, id))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Customer not found" });
-    return res.json({ ...updated, activeLoansCount: 0 });
+
+    const loanCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(loansTable)
+      .where(sql`${loansTable.customerId} = ${id} AND ${loansTable.status} IN ('active','overdue','partially_paid','auction')`);
+
+    return res.json({ ...updated, activeLoansCount: Number(loanCount[0].count) });
   } catch (err) {
     req.log.error({ err }, "Update customer error");
     return res.status(500).json({ error: "Internal server error" });

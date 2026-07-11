@@ -747,6 +747,53 @@ export const useDeleteCustomer = <TError = ErrorType<unknown>,
       return useMutation(getDeleteCustomerMutationOptions(options));
     }
 
+export const getDeleteLoanUrl = (id: number) => `/api/loans/${id}`;
+
+/**
+ * @summary Delete loan
+ */
+export const deleteLoan = async (id: number, options?: RequestInit): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteLoanUrl(id), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteLoanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLoan>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLoan>>, TError,{id: number}, TContext> => {
+  const mutationKey = ['deleteLoan'];
+  const {mutation: mutationOptions, request: requestOptions} = options ?
+        options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+        options
+        : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: { mutationKey, }, request: undefined};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLoan>>, {id: number}> = (props) => {
+    const {id} = props ?? {};
+    return deleteLoan(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteLoanMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLoan>>>;
+export type DeleteLoanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete loan
+ */
+export const useDeleteLoan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLoan>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationResult<
+      Awaited<ReturnType<typeof deleteLoan>>,
+      TError,
+      {id: number},
+      TContext
+    > => {
+    return useMutation(getDeleteLoanMutationOptions(options));
+  };
+
 export const getListLoansUrl = (params?: ListLoansParams,) => {
   const normalizedParams = new URLSearchParams();
 

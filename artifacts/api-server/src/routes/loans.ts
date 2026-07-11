@@ -249,6 +249,25 @@ router.patch("/loans/:id", requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /loans/:id
+router.delete("/loans/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const existing = await db.select().from(loansTable).where(eq(loansTable.id, id)).limit(1);
+    if (!existing[0]) return res.status(404).json({ error: "Loan not found" });
+
+    // Delete dependents first to respect FK constraints
+    await db.delete(jewelleryItemsTable).where(eq(jewelleryItemsTable.loanId, id));
+    await db.delete(paymentsTable).where(eq(paymentsTable.loanId, id));
+    await db.delete(loansTable).where(eq(loansTable.id, id));
+
+    return res.json({ message: "Loan deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Delete loan error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /loans/:id/payment
 router.post("/loans/:id/payment", requireAuth, async (req, res) => {
   try {
