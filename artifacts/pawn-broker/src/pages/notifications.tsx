@@ -54,9 +54,12 @@ export default function Notifications() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
+      const failedItem = data.results?.find((r: any) => r.status === "failed" || r.status === "skipped");
+      const failReason = failedItem?.reason ? ` (${failedItem.reason})` : "";
       toast({
-        title: "Reminders Sent",
-        description: `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.`,
+        title: data.sent > 0 ? "Reminders Sent" : "Send Failed",
+        description: `${data.sent} sent · ${data.failed} failed out of ${data.total} overdue loans.${failReason}`,
+        variant: data.sent === 0 && data.failed > 0 ? "destructive" : "default",
       });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Send Failed", description: e.message });

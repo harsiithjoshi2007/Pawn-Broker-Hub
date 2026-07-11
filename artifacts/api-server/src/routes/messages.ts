@@ -20,6 +20,15 @@ async function getShopSettings() {
   };
 }
 
+/** Normalise a phone number to E.164. Assumes India (+91) if no country code. */
+function toE164(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (phone.startsWith("+")) return phone.trim();          // already E.164
+  if (digits.length === 10) return `+91${digits}`;         // Indian 10-digit
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  return `+${digits}`;                                     // best-effort
+}
+
 async function sendTwilioMessage(
   to: string,
   body: string,
@@ -31,8 +40,10 @@ async function sendTwilioMessage(
 
   // proxy() returns a Response (like fetch) — must call .json() to read it.
   // Account SID is stored in shop_settings by the admin; no dynamic lookup needed.
-  const toNum   = useWhatsApp ? `whatsapp:${to}`         : to;
-  const fromNum = useWhatsApp ? `whatsapp:${fromNumber}` : fromNumber;
+  const normalizedTo   = toE164(to);
+  const normalizedFrom = toE164(fromNumber);
+  const toNum   = useWhatsApp ? `whatsapp:${normalizedTo}`   : normalizedTo;
+  const fromNum = useWhatsApp ? `whatsapp:${normalizedFrom}` : normalizedFrom;
 
   const msgResponse = await connectors.proxy(
     "twilio",
