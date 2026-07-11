@@ -6,6 +6,7 @@ export const shopSettingsTable = pgTable("shop_settings", {
   shopPhone: text("shop_phone"),
   shopAddress: text("shop_address"),
   twilioAccountSid: text("twilio_account_sid"),
+  twilioAuthToken: text("twilio_auth_token"),
   twilioFromNumber: text("twilio_from_number"),
   twilioWhatsappEnabled: boolean("twilio_whatsapp_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

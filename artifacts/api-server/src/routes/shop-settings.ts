@@ -16,6 +16,7 @@ router.get("/shop-settings", requireAuth, async (req, res) => {
         shopPhone: null,
         shopAddress: null,
         twilioAccountSid: null,
+        twilioAuthToken: null,
         twilioFromNumber: null,
         twilioWhatsappEnabled: false,
       });
@@ -35,6 +36,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
       shopPhone,
       shopAddress,
       twilioAccountSid,
+      twilioAuthToken,
       twilioFromNumber,
       twilioWhatsappEnabled,
     } = req.body;
@@ -49,6 +51,7 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
           ...(shopPhone             !== undefined && { shopPhone:             shopPhone || null }),
           ...(shopAddress           !== undefined && { shopAddress:           shopAddress || null }),
           ...(twilioAccountSid      !== undefined && { twilioAccountSid:      twilioAccountSid || null }),
+          ...(twilioAuthToken       !== undefined && { twilioAuthToken:       twilioAuthToken || null }),
           ...(twilioFromNumber      !== undefined && { twilioFromNumber:      twilioFromNumber || null }),
           ...(twilioWhatsappEnabled !== undefined && { twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled) }),
           updatedAt: new Date(),
@@ -61,11 +64,12 @@ router.put("/shop-settings", requireAuth, async (req, res) => {
     const [created] = await db
       .insert(shopSettingsTable)
       .values({
-        shopName:              shopName          || "GoldVault Pawn Broker",
-        shopPhone:             shopPhone         || null,
-        shopAddress:           shopAddress       || null,
-        twilioAccountSid:      twilioAccountSid  || null,
-        twilioFromNumber:      twilioFromNumber  || null,
+        shopName:              shopName         || "GoldVault Pawn Broker",
+        shopPhone:             shopPhone        || null,
+        shopAddress:           shopAddress      || null,
+        twilioAccountSid:      twilioAccountSid || null,
+        twilioAuthToken:       twilioAuthToken  || null,
+        twilioFromNumber:      twilioFromNumber || null,
         twilioWhatsappEnabled: Boolean(twilioWhatsappEnabled),
       })
       .returning();

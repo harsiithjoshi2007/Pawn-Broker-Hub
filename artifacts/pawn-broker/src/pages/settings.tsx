@@ -17,6 +17,7 @@ interface ShopSettingsForm {
   shopPhone: string;
   shopAddress: string;
   twilioAccountSid: string;
+  twilioAuthToken: string;
   twilioFromNumber: string;
   twilioWhatsappEnabled: boolean;
 }
@@ -32,7 +33,7 @@ export default function Settings() {
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [isSavingShop, setIsSavingShop] = useState(false);
   const [shopForm, setShopForm] = useState<ShopSettingsForm>({
-    shopName: "", shopPhone: "", shopAddress: "", twilioAccountSid: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
+    shopName: "", shopPhone: "", shopAddress: "", twilioAccountSid: "", twilioAuthToken: "", twilioFromNumber: "", twilioWhatsappEnabled: false,
   });
 
   useEffect(() => {
@@ -44,12 +45,13 @@ export default function Settings() {
 
   const startEditShop = () => {
     setShopForm({
-      shopName:              shopSettings?.shopName              || "",
-      shopPhone:             shopSettings?.shopPhone             || "",
-      shopAddress:           shopSettings?.shopAddress           || "",
+      shopName:              shopSettings?.shopName                   || "",
+      shopPhone:             shopSettings?.shopPhone                  || "",
+      shopAddress:           shopSettings?.shopAddress                || "",
       twilioAccountSid:      (shopSettings as any)?.twilioAccountSid || "",
-      twilioFromNumber:      shopSettings?.twilioFromNumber      || "",
-      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled || false,
+      twilioAuthToken:       (shopSettings as any)?.twilioAuthToken   || "",
+      twilioFromNumber:      shopSettings?.twilioFromNumber           || "",
+      twilioWhatsappEnabled: shopSettings?.twilioWhatsappEnabled      || false,
     });
     setIsEditingShop(true);
   };
@@ -366,6 +368,19 @@ export default function Settings() {
                 </p>
               </div>
               <div className="space-y-2">
+                <Label>Twilio Auth Token <span className="text-destructive">*</span></Label>
+                <Input
+                  value={shopForm.twilioAuthToken}
+                  onChange={e => setShopForm(f => ({ ...f, twilioAuthToken: e.target.value }))}
+                  placeholder="••••••••••••••••••••••••••••••••"
+                  type="password"
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Found below your Account SID on the <strong>Twilio Console</strong> dashboard. Keep this secret.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label>Twilio Sender Number <span className="text-destructive">*</span></Label>
                 <Input
                   value={shopForm.twilioFromNumber}
@@ -423,6 +438,12 @@ export default function Settings() {
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Account SID</Label>
                 <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.twilioAccountSid ? "text-muted-foreground italic" : ""}`}>
                   {(shopSettings as any)?.twilioAccountSid ? "AC••••••••••••••••••••••••••••••••" : "Not configured"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Twilio Auth Token</Label>
+                <p className={`mt-1 font-mono text-sm font-medium ${!(shopSettings as any)?.twilioAuthToken ? "text-muted-foreground italic" : ""}`}>
+                  {(shopSettings as any)?.twilioAuthToken ? "••••••••••••••••••••••••••••••••" : "Not configured"}
                 </p>
               </div>
               <div>

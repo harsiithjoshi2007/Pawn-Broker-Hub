@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { loansTable, customersTable, shopSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
-import { ReplitConnectors } from "@replit/connectors-sdk";
+// Direct Twilio REST API calls — no connector proxy needed (proxy uses JWT which Twilio REST rejects)
 import { format } from "date-fns";
 
 const router = Router();
@@ -34,26 +34,29 @@ async function sendTwilioMessage(
   body: string,
   fromNumber: string,
   accountSid: string,
+  authToken: string,
   useWhatsApp: boolean,
 ): Promise<void> {
-  const connectors = new ReplitConnectors();
-
-  // proxy() returns a Response (like fetch) — must call .json() to read it.
-  // Account SID is stored in shop_settings by the admin; no dynamic lookup needed.
+  // Call Twilio REST API directly with HTTP Basic Auth (Account SID + Auth Token).
+  // The Replit connector proxy uses JWT which Twilio REST API does not accept for SMS.
   const normalizedTo   = toE164(to);
   const normalizedFrom = toE164(fromNumber);
   const toNum   = useWhatsApp ? `whatsapp:${normalizedTo}`   : normalizedTo;
   const fromNum = useWhatsApp ? `whatsapp:${normalizedFrom}` : normalizedFrom;
 
-  const msgResponse = await connectors.proxy(
-    "twilio",
-    `/2010-04-01/Accounts/${accountSid}/Messages.json`,
+  const basicAuth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+
+  const msgResponse = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
     {
       method:  "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body:    new URLSearchParams({ To: toNum, From: fromNum, Body: body }),
+      headers: {
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type":  "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ To: toNum, From: fromNum, Body: body }),
     },
-  ) as Response;
+  );
 
   if (!msgResponse.ok) {
     const errData = await msgResponse.json().catch(() => ({})) as any;
@@ -102,14 +105,13 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
 
     const settings = await getShopSettings();
     if (!settings.twilioAccountSid) {
-      return res.status(400).json({
-        error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging.",
-      });
+      return res.status(400).json({ error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging." });
+    }
+    if (!(settings as any).twilioAuthToken) {
+      return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
     }
     if (!settings.twilioFromNumber) {
-      return res.status(400).json({
-        error: "Twilio sender number not configured. Go to Settings → Shop & Messaging.",
-      });
+      return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
     }
 
     const rows = await db
@@ -138,7 +140,7 @@ router.post("/messages/send/:loanId", requireAuth, async (req, res) => {
       loan.dueDate,
     );
 
-    await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, useWhatsApp);
+    await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
     return res.json({ success: true, to: toNumber, channel: useWhatsApp ? "whatsapp" : "sms" });
   } catch (err: any) {
     req.log.error({ err }, "Send single reminder error");
@@ -153,14 +155,13 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
 
     const settings = await getShopSettings();
     if (!settings.twilioAccountSid) {
-      return res.status(400).json({
-        error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging.",
-      });
+      return res.status(400).json({ error: "Twilio Account SID not configured. Go to Settings → Shop & Messaging." });
+    }
+    if (!(settings as any).twilioAuthToken) {
+      return res.status(400).json({ error: "Twilio Auth Token not configured. Go to Settings → Shop & Messaging." });
     }
     if (!settings.twilioFromNumber) {
-      return res.status(400).json({
-        error: "Twilio sender number not configured. Go to Settings → Shop & Messaging.",
-      });
+      return res.status(400).json({ error: "Twilio sender number not configured. Go to Settings → Shop & Messaging." });
     }
 
     const overdueRows = await db
@@ -192,7 +193,7 @@ router.post("/messages/send-overdue", requireAuth, async (req, res) => {
           loan.principalAmount, loan.outstandingBalance,
           loan.dueDate,
         );
-        await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, useWhatsApp);
+        await sendTwilioMessage(toNumber, message, settings.twilioFromNumber, settings.twilioAccountSid!, (settings as any).twilioAuthToken!, useWhatsApp);
         sent++;
         results.push({ loanId: loan.id, loanNumber: loan.loanNumber, customerName, status: "sent", to: toNumber });
       } catch (e: any) {
