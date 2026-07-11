@@ -6,6 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { populateFromBearer } from "./middleware/auth";
 
 // Ensure the session table exists (connect-pg-simple's createTableIfMissing
 // reads a SQL file that esbuild doesn't bundle, so we create it ourselves).
@@ -109,6 +110,20 @@ app.use(
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
   })
+);
+
+// Bearer-token middleware: runs after session middleware so session takes
+// priority. For requests with a valid Authorization: Bearer <jwt> and no
+// active session, backfills req.tokenUserId / req.tokenUserRole so that
+// requireAuth and route handlers work identically for both auth methods.
+app.use(
+  populateFromBearer(
+    (() => {
+      const s = process.env.JWT_SECRET ?? process.env.SESSION_SECRET;
+      if (!s) throw new Error("JWT_SECRET or SESSION_SECRET must be set");
+      return s;
+    })()
+  )
 );
 
 app.use("/api", router);

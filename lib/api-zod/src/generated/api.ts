@@ -28,7 +28,8 @@ export const LoginResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'manager', 'staff'])
+  "role": zod.enum(['admin', 'manager', 'staff']),
+  "token": zod.string().optional().describe('Signed JWT issued on login. Present only in the login response. Mobile\/API clients should persist this and send it as `Authorization: Bearer <token>` on subsequent requests. Web clients can ignore it — the session cookie handles auth automatically.\n')
 })
 
 
@@ -47,7 +48,8 @@ export const GetMeResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'manager', 'staff'])
+  "role": zod.enum(['admin', 'manager', 'staff']),
+  "token": zod.string().optional().describe('Signed JWT issued on login. Present only in the login response. Mobile\/API clients should persist this and send it as `Authorization: Bearer <token>` on subsequent requests. Web clients can ignore it — the session cookie handles auth automatically.\n')
 })
 
 

@@ -36,6 +36,8 @@ export interface AuthUser {
   email: string;
   name: string;
   role: AuthUserRole;
+  /** Signed JWT issued on login. Present only in the login response. Mobile/API clients should persist this and send it as `Authorization: Bearer <token>` on subsequent requests. Web clients can ignore it — the session cookie handles auth automatically. */
+  token?: string;
 }
 
 export interface Customer {
