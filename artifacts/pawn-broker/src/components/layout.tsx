@@ -58,10 +58,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       <div className="p-4 border-t border-sidebar-border bg-sidebar/50 shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <Avatar className="h-9 w-9 bg-sidebar-primary text-sidebar-primary-foreground">
-            <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{(user.name || user.email || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-medium text-white truncate">{user.name}</span>
+            <span className="text-sm font-medium text-white truncate">{user.name || user.email}</span>
             <span className="text-xs text-sidebar-foreground/70 capitalize truncate">{user.role}</span>
           </div>
         </div>

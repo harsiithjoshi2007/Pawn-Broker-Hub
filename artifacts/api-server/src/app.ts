@@ -100,7 +100,7 @@ app.use(
       ) {
         return callback(null, true);
       }
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
+      callback(null, false);
     },
     credentials: true,
   })
