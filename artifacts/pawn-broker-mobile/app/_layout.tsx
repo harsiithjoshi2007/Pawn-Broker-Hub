@@ -11,6 +11,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NetworkBanner } from '@/components/NetworkBanner';
+import { PendingSyncBanner } from '@/components/PendingSyncBanner';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -21,7 +22,14 @@ import {
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
-import { setBaseUrl } from '@workspace/api-client-react';
+import {
+  setBaseUrl,
+  getCreateLoanMutationOptions,
+  getCreateCustomerMutationOptions,
+  getRecordPaymentMutationOptions,
+  getCloseLoanMutationOptions,
+  getRenewLoanMutationOptions,
+} from '@workspace/api-client-react';
 import { AuthProvider } from '@/context/auth';
 import { Platform } from 'react-native';
 import { configureOnlineManager } from '@/lib/onlineManager';
@@ -61,6 +69,33 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Register mutation defaults so that persisted (paused) mutations can be
+// replayed after an app restart. TanStack Query serialises the mutation key
+// and variables to AsyncStorage, but the mutationFn itself cannot be
+// serialised — so it must be re-registered here at startup. Each call to
+// setMutationDefaults matches by key and injects the correct function when
+// the mutation is rehydrated.
+queryClient.setMutationDefaults(
+  ['createLoan'],
+  getCreateLoanMutationOptions(),
+);
+queryClient.setMutationDefaults(
+  ['createCustomer'],
+  getCreateCustomerMutationOptions(),
+);
+queryClient.setMutationDefaults(
+  ['recordPayment'],
+  getRecordPaymentMutationOptions(),
+);
+queryClient.setMutationDefaults(
+  ['closeLoan'],
+  getCloseLoanMutationOptions(),
+);
+queryClient.setMutationDefaults(
+  ['renewLoan'],
+  getRenewLoanMutationOptions(),
+);
 
 // Persist the query cache to AsyncStorage so data survives app restarts.
 const asyncStoragePersister = createAsyncStoragePersister({
@@ -141,6 +176,22 @@ export default function RootLayout() {
             maxAge: 1000 * 60 * 60 * 24,
             // Bust the persisted cache if queries change shape.
             buster: 'v1',
+            // Also serialise any mutations that were paused mid-flight so they
+            // survive an app restart. Only paused mutations are included —
+            // idle/success/error ones have already resolved and don't need
+            // to be replayed.
+            dehydrateOptions: {
+              shouldDehydrateMutation: (mutation) =>
+                mutation.state.isPaused === true,
+            },
+          }}
+          onSuccess={() => {
+            // After the persisted cache is restored on launch, replay any
+            // mutations that were paused (e.g. created while offline). If the
+            // device is still offline they will stay paused; when connectivity
+            // returns the onlineManager listener in onlineManager.ts
+            // automatically triggers another resumePausedMutations call.
+            queryClient.resumePausedMutations();
           }}
         >
           <GestureHandlerRootView style={{ flex: 1 }}>
@@ -148,6 +199,7 @@ export default function RootLayout() {
               <AuthProvider>
                 <RootLayoutNav />
                 <NetworkBanner />
+                <PendingSyncBanner />
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
