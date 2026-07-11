@@ -56,7 +56,7 @@ export default function NewLoan() {
 
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomers(
     { search: customerSearch, limit: 5 },
-    { query: { enabled: step === 1 && customerSearch.length > 1 } }
+    { query: { queryKey: ['listCustomers', customerSearch], enabled: step === 1 && customerSearch.length > 1 } }
   );
 
   const createLoan = useCreateLoan();

@@ -7,6 +7,24 @@ import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
+// Ensure the session table exists (connect-pg-simple's createTableIfMissing
+// reads a SQL file that esbuild doesn't bundle, so we create it ourselves).
+async function ensureSessionTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "user_sessions" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE
+    ) WITH (OIDS=FALSE);
+    CREATE INDEX IF NOT EXISTS "IDX_user_sessions_expire" ON "user_sessions" ("expire");
+  `);
+}
+
+ensureSessionTable().catch((err) =>
+  logger.error({ err }, "Failed to ensure session table"),
+);
+
 const PgSession = connectPgSimple(session);
 
 const app: Express = express();
@@ -34,9 +52,35 @@ app.use(
   }),
 );
 
+// Build an explicit allowlist of trusted origins.
+// In development, we allow the Replit dev domain (host-based proxying) plus localhost.
+// In production, restrict to ALLOWED_ORIGINS env var (comma-separated).
+function buildAllowedOrigins(): string[] {
+  const env = process.env.ALLOWED_ORIGINS;
+  if (env) {
+    return env.split(",").map((o) => o.trim()).filter(Boolean);
+  }
+  // Development fallback: Replit proxied origins
+  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  const origins: string[] = ["http://localhost:3000", "http://localhost:5173"];
+  if (replitDevDomain) {
+    origins.push(`https://${replitDevDomain}`);
+  }
+  return origins;
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Allow same-origin (no Origin header) and requests from the allowlist.
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some((o) => origin.endsWith(`.${o.replace(/^https?:\/\//, "")}`))) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      }
+    },
     credentials: true,
   })
 );
@@ -50,9 +94,12 @@ app.use(
     store: new PgSession({
       pool,
       tableName: "user_sessions",
-      createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET ?? "pawnbroker-dev-secret-change-in-prod",
+    secret: (() => {
+      const s = process.env.SESSION_SECRET;
+      if (!s) throw new Error("SESSION_SECRET environment variable is required but not set.");
+      return s;
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {

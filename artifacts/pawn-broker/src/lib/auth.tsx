@@ -1,5 +1,13 @@
 import { createContext, useContext, ReactNode } from "react";
-import { useGetMe, useLogin, useLogout, getGetMeQueryKey, AuthUser, LoginCredentials } from "@workspace/api-client-react";
+import {
+  useGetMe,
+  useLogin,
+  useLogout,
+  getGetMeQueryKey,
+  AuthUser,
+  LoginCredentials,
+  MessageResponse,
+} from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -7,8 +15,8 @@ import { Loader2 } from "lucide-react";
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: ReturnType<typeof useLogin>["mutateAsync"];
-  logout: ReturnType<typeof useLogout>["mutateAsync"];
+  login: (credentials: LoginCredentials) => Promise<AuthUser>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -19,20 +27,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const { data: user, isLoading } = useGetMe({
     query: {
+      queryKey: getGetMeQueryKey(),
       retry: false,
-    }
+    },
   });
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<AuthUser> => {
     const res = await loginMutation.mutateAsync({ data: credentials });
     queryClient.setQueryData(getGetMeQueryKey(), res);
     return res;
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     await logoutMutation.mutateAsync();
     queryClient.setQueryData(getGetMeQueryKey(), null);
     setLocation("/login");

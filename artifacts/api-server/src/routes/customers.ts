@@ -104,7 +104,7 @@ router.post("/customers", requireAuth, async (req, res) => {
 // GET /customers/:id
 router.get("/customers/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const customers = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
     if (!customers[0]) return res.status(404).json({ error: "Customer not found" });
 
@@ -123,7 +123,7 @@ router.get("/customers/:id", requireAuth, async (req, res) => {
 // PATCH /customers/:id
 router.patch("/customers/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [updated] = await db
       .update(customersTable)
       .set({
@@ -154,7 +154,7 @@ router.patch("/customers/:id", requireAuth, async (req, res) => {
 // DELETE /customers/:id
 router.delete("/customers/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(customersTable).where(eq(customersTable.id, id));
     return res.json({ message: "Customer deleted" });
   } catch (err) {

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { FileText, AlertCircle, IndianRupee, TrendingUp, Briefcase, Gavel, ArrowRight, Activity, Skeleton } from "lucide-react";
+import { FileText, AlertCircle, IndianRupee, TrendingUp, Briefcase, Gavel, ArrowRight, Activity } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";

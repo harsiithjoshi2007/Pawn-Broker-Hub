@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatIndianDate } from "@/lib/utils";
-import { Search, Plus, Eye, Edit, User, Phone, Skeleton } from "lucide-react";
+import { Search, Plus, Eye, Edit, User, Phone } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 

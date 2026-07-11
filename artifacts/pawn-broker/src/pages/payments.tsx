@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
-import { Skeleton, CreditCard, ArrowUpRight } from "lucide-react";
+import { CreditCard, ArrowUpRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 
 export default function PaymentsList() {

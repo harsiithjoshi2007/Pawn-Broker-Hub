@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Edit, FileText, Phone, Mail, MapPin, Calendar, CreditCard, Skeleton, Plus } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Phone, Mail, MapPin, Calendar, CreditCard, Plus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomerDetail() {
   const { id } = useParams();

@@ -660,7 +660,20 @@ importers:
         version: 0.31.10
 
   scripts:
+    dependencies:
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../lib/db
+      bcrypt:
+        specifier: ^5.1.1
+        version: 5.1.1
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
     devDependencies:
+      '@types/bcrypt':
+        specifier: ^5.0.2
+        version: 5.0.2
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.4

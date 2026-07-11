@@ -9,20 +9,23 @@ declare module "express-session" {
   }
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (!req.session?.userId) {
-    return res.status(401).json({ error: "Not authenticated" });
+    res.status(401).json({ error: "Not authenticated" });
+    return;
   }
   next();
 }
 
 export function requireRole(...roles: string[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.session?.userId) {
-      return res.status(401).json({ error: "Not authenticated" });
+      res.status(401).json({ error: "Not authenticated" });
+      return;
     }
-    if (!roles.includes(req.session.userRole)) {
-      return res.status(403).json({ error: "Insufficient permissions" });
+    if (!req.session.userRole || !roles.includes(req.session.userRole)) {
+      res.status(403).json({ error: "Insufficient permissions" });
+      return;
     }
     next();
   };

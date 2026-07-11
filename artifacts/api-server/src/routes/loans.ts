@@ -181,7 +181,7 @@ router.post("/loans", requireAuth, async (req, res) => {
 // GET /loans/:id
 router.get("/loans/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const loans = await db.select({
       loan: loansTable,
       customerName: customersTable.name,
@@ -215,7 +215,7 @@ router.get("/loans/:id", requireAuth, async (req, res) => {
 // PATCH /loans/:id
 router.patch("/loans/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [updated] = await db.update(loansTable)
       .set({ status: req.body.status, notes: req.body.notes, penaltyRate: req.body.penaltyRate, updatedAt: new Date() })
       .where(eq(loansTable.id, id))
@@ -231,20 +231,39 @@ router.patch("/loans/:id", requireAuth, async (req, res) => {
 // POST /loans/:id/payment
 router.post("/loans/:id/payment", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const loans = await db.select().from(loansTable).where(eq(loansTable.id, id)).limit(1);
     if (!loans[0]) return res.status(404).json({ error: "Loan not found" });
 
     const loan = loans[0];
     const { amount, paymentDate, paymentMode, referenceNumber, notes, interestPaid, principalPaid, penaltyPaid } = req.body;
 
-    const ip = interestPaid ?? Math.min(amount, loan.outstandingBalance - loan.principalAmount > 0 ? loan.outstandingBalance - loan.principalAmount : 0);
-    const pp = principalPaid ?? (amount - (ip || 0));
-    const pnp = penaltyPaid ?? 0;
+    // Derive how much interest and principal have been paid cumulatively from prior payments
+    const priorPayments = await db
+      .select({
+        totalInterestPaid: sql<number>`coalesce(sum(interest_paid), 0)`,
+        totalPrincipalPaid: sql<number>`coalesce(sum(principal_paid), 0)`,
+        totalPenaltyPaid: sql<number>`coalesce(sum(penalty_paid), 0)`,
+      })
+      .from(paymentsTable)
+      .where(eq(paymentsTable.loanId, id));
+
+    const priorInterestPaid = Number(priorPayments[0].totalInterestPaid);
+    const priorPrincipalPaid = Number(priorPayments[0].totalPrincipalPaid);
+
+    // Auto-split: interest first, then principal, then penalty
+    const remainingInterestDue = Math.max(0, loan.totalInterest - priorInterestPaid);
+    const ip: number = interestPaid !== undefined ? Number(interestPaid) : Math.min(amount, remainingInterestDue);
+    const pnp: number = penaltyPaid !== undefined ? Number(penaltyPaid) : 0;
+    const pp: number = principalPaid !== undefined ? Number(principalPaid) : Math.max(0, amount - ip - pnp);
 
     const newAmountPaid = loan.amountPaid + amount;
     const newOutstanding = Math.max(0, loan.outstandingBalance - amount);
-    const newStatus = newOutstanding <= 0 ? "closed" : newAmountPaid > loan.principalAmount ? "partially_paid" : loan.status;
+    const newStatus = newOutstanding <= 0 ? "closed" : (newAmountPaid > 0 ? "partially_paid" : loan.status);
+
+    // Remaining balances after this payment
+    const newRemainingPrincipal = Math.max(0, loan.principalAmount - priorPrincipalPaid - pp);
+    const newRemainingInterest = Math.max(0, loan.totalInterest - priorInterestPaid - ip);
 
     const receiptNumber = await generateReceiptNumber();
 
@@ -256,8 +275,8 @@ router.post("/loans/:id/payment", requireAuth, async (req, res) => {
       interestPaid: ip,
       principalPaid: pp,
       penaltyPaid: pnp,
-      remainingPrincipal: Math.max(0, loan.principalAmount - (loan.amountPaid + pp)),
-      remainingInterest: Math.max(0, loan.totalInterest - ip),
+      remainingPrincipal: newRemainingPrincipal,
+      remainingInterest: newRemainingInterest,
       paymentMode,
       referenceNumber: referenceNumber || null,
       notes: notes || null,
@@ -281,7 +300,7 @@ router.post("/loans/:id/payment", requireAuth, async (req, res) => {
 // POST /loans/:id/close
 router.post("/loans/:id/close", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const loans = await db.select().from(loansTable).where(eq(loansTable.id, id)).limit(1);
     if (!loans[0]) return res.status(404).json({ error: "Loan not found" });
 
@@ -323,7 +342,7 @@ router.post("/loans/:id/close", requireAuth, async (req, res) => {
 // POST /loans/:id/renew
 router.post("/loans/:id/renew", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const loans = await db.select().from(loansTable).where(eq(loansTable.id, id)).limit(1);
     if (!loans[0]) return res.status(404).json({ error: "Loan not found" });
 

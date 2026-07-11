@@ -5,9 +5,17 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "seed-admin": "tsx ./seed-admin.ts",
+    "seed": "tsx ./seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "bcrypt": "^5.1.1",
+    "drizzle-orm": "catalog:"
+  },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }

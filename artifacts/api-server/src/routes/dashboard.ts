@@ -14,13 +14,18 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
     monthStart.setDate(1);
     const monthStartStr = monthStart.toISOString().split("T")[0];
 
-    const [statusCounts, todayPayments, monthPayments, recentLoans, monthlyData] = await Promise.all([
+    const [statusCounts, portfolioResult, todayPayments, monthPayments, recentLoans, monthlyData] = await Promise.all([
       // Status breakdown
       db.select({
         status: loansTable.status,
         count: sql<number>`count(*)`,
         type: loansTable.loanType,
       }).from(loansTable).groupBy(loansTable.status, loansTable.loanType),
+
+      // Portfolio value: sum of outstanding balances for non-closed loans
+      db.select({ total: sql<number>`coalesce(sum(outstanding_balance), 0)` })
+        .from(loansTable)
+        .where(sql`status IN ('active', 'overdue', 'partially_paid', 'auction')`),
 
       // Today's collection
       db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
@@ -60,10 +65,6 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
     const countByStatus = (status: string) =>
       Number(statusCounts.filter((s) => s.status === status).reduce((a, b) => a + Number(b.count), 0));
 
-    const portfolioValue = statusCounts
-      .filter((s) => ["active", "overdue", "partially_paid", "auction"].includes(s.status))
-      .reduce((sum) => sum, 0);
-
     const loanStatusBreakdown = ["active", "overdue", "closed", "auction", "partially_paid"].map((status) => ({
       status,
       count: countByStatus(status),
@@ -76,13 +77,11 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       totalAuctionLoans: countByStatus("auction"),
       todayCollection: Number(todayPayments[0]?.total ?? 0),
       monthlyIncome: Number(monthPayments[0]?.total ?? 0),
-      loanPortfolioValue: statusCounts
-        .filter((s) => ["active", "overdue", "partially_paid"].includes(s.status))
-        .reduce((sum) => sum + 0, 0),
+      loanPortfolioValue: Number(portfolioResult[0]?.total ?? 0),
       goldLoansCount: Number(statusCounts.filter((s) => s.type === "gold").reduce((a, b) => a + Number(b.count), 0)),
       silverLoansCount: Number(statusCounts.filter((s) => s.type === "silver").reduce((a, b) => a + Number(b.count), 0)),
       recentLoans: recentLoans.map(({ loan, customerName }) => ({ ...loan, customerName })),
-      monthlyDisbursement: (monthlyData as any[]).map((row) => ({
+      monthlyDisbursement: (monthlyData.rows as any[]).map((row) => ({
         month: row.month,
         amount: Number(row.amount),
         count: Number(row.count),
