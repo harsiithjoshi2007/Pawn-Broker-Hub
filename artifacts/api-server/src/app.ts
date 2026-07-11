@@ -80,12 +80,27 @@ const allowedOrigins = buildAllowedOrigins();
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow same-origin (no Origin header) and requests from the allowlist.
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some((o) => origin.endsWith(`.${o.replace(/^https?:\/\//, "")}`))) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      // Allow same-origin requests (no Origin header).
+      if (!origin) return callback(null, true);
+      // Allow explicit allowlist entries and their subdomains.
+      if (
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.some((o) =>
+          origin.endsWith(`.${o.replace(/^https?:\/\//, "")}`)
+        )
+      ) {
+        return callback(null, true);
       }
+      // Always allow Replit deployment domains (*.replit.app) and dev preview
+      // domains (*.replit.dev) — these are Replit-proxied origins that only
+      // the project owner can register.
+      if (
+        origin.endsWith(".replit.app") ||
+        origin.endsWith(".replit.dev")
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
   })
