@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { 
@@ -26,8 +26,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { theme, setTheme } = useTheme();
 
+  useEffect(() => {
+    if (!user) {
+      setLocation("/login");
+    }
+  }, [user, setLocation]);
+
   if (!user) {
-    setLocation("/login");
     return null;
   }
 
