@@ -1,0 +1,1 @@
+- [Wouter routing pattern](wouter-routing.md) — never wrap the AppLayout in the same Route that has ErrorBoundary key={location}; use ProtectedLayout pattern instead.
