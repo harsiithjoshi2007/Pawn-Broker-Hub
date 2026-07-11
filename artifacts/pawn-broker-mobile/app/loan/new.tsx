@@ -19,6 +19,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import type { LoanInput, JewelleryItemInput } from '@workspace/api-client-react';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 type LoanType = 'gold' | 'silver';
 type RatePeriod = 'day' | 'month' | 'year';
@@ -39,6 +40,7 @@ export default function NewLoanScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
+  const { isOffline } = useNetworkStatus();
 
   // Customer selection
   const [customerSearch, setCustomerSearch] = useState('');
@@ -153,6 +155,16 @@ export default function NewLoanScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Offline banner */}
+        {isOffline && (
+          <View style={[styles.offlineBanner]}>
+            <Feather name="wifi-off" size={14} color="#92400E" />
+            <Text style={styles.offlineBannerText}>
+              You're offline — connect to create a new loan
+            </Text>
+          </View>
+        )}
+
         {/* Customer selection */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Customer</Text>
@@ -430,9 +442,9 @@ export default function NewLoanScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, { backgroundColor: colors.navy }, createLoan.isPending && { opacity: 0.7 }]}
+          style={[styles.submitBtn, { backgroundColor: colors.navy }, (createLoan.isPending || isOffline) && { opacity: 0.5 }]}
           onPress={handleSubmit}
-          disabled={createLoan.isPending}
+          disabled={createLoan.isPending || isOffline}
           activeOpacity={0.85}
         >
           {createLoan.isPending ? (
@@ -524,6 +536,8 @@ const styles = StyleSheet.create({
   jewTypeChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 16, marginTop: 4 },
   submitBtnText: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  offlineBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', borderRadius: 10, borderWidth: 1, borderColor: '#FCD34D', padding: 12, marginBottom: 14 },
+  offlineBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#92400E' },
   modalRoot: { flex: 1 },
   modalTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   modalTitle: { fontSize: 17, fontFamily: 'Inter_700Bold' },

@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LoanCard } from '@/components/LoanCard';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -34,6 +35,7 @@ export default function LoansScreen() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const { isOffline } = useNetworkStatus();
 
   const isWeb = Platform.OS === 'web';
   const topPad = isWeb ? 67 : insets.top;
@@ -83,13 +85,19 @@ export default function LoansScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: colors.gold }]}
-            onPress={() => router.push('/loan/new')}
-            activeOpacity={0.85}
-          >
-            <Feather name="plus" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.fabWrap}>
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: isOffline ? '#6B7A8D' : colors.gold }, isOffline && { opacity: 0.6 }]}
+              onPress={() => router.push('/loan/new')}
+              activeOpacity={0.85}
+              disabled={isOffline}
+            >
+              <Feather name="plus" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            {isOffline && (
+              <Text style={styles.fabOfflineLabel}>Offline</Text>
+            )}
+          </View>
         </View>
 
         {/* Filter chips */}
@@ -215,4 +223,6 @@ const styles = StyleSheet.create({
   retryBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8, marginTop: 4 },
   emptyTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold', marginTop: 4 },
   emptyMsg: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  fabWrap: { alignItems: 'center', gap: 4 },
+  fabOfflineLabel: { fontSize: 9, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.3 },
 });

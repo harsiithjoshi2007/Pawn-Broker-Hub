@@ -16,11 +16,13 @@ import { useCreateCustomer } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 export default function NewCustomerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
+  const { isOffline } = useNetworkStatus();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -74,6 +76,16 @@ export default function NewCustomerScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      {/* Offline banner */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Feather name="wifi-off" size={14} color="#92400E" />
+          <Text style={styles.offlineBannerText}>
+            You're offline — connect to add a new customer
+          </Text>
+        </View>
+      )}
+
       {/* Basic Info */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Basic Information</Text>
@@ -207,9 +219,9 @@ export default function NewCustomerScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitBtn, { backgroundColor: colors.navy }, createCustomer.isPending && { opacity: 0.7 }]}
+        style={[styles.submitBtn, { backgroundColor: colors.navy }, (createCustomer.isPending || isOffline) && { opacity: 0.5 }]}
         onPress={handleSubmit}
-        disabled={createCustomer.isPending}
+        disabled={createCustomer.isPending || isOffline}
         activeOpacity={0.85}
       >
         {createCustomer.isPending ? (
@@ -251,4 +263,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitBtnText: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  offlineBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', borderRadius: 10, borderWidth: 1, borderColor: '#FCD34D', padding: 12, marginBottom: 14 },
+  offlineBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#92400E' },
 });

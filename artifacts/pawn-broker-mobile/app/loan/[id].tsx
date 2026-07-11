@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoanStatusBadge } from '@/components/LoanStatusBadge';
 import { PaymentItem } from '@/components/PaymentItem';
 import * as Haptics from 'expo-haptics';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import type { PaymentInput, LoanCloseInput } from '@workspace/api-client-react';
 
 const fmt = (n: number) =>
@@ -80,6 +81,7 @@ export default function LoanDetailScreen() {
   const { data: loan, isLoading, isError, refetch } = useGetLoan(loanId);
   const recordPayment = useRecordPayment();
   const closeLoan = useCloseLoan();
+  const { isOffline } = useNetworkStatus();
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -258,23 +260,33 @@ export default function LoanDetailScreen() {
 
         {/* Action buttons */}
         {isActive && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.emerald }]}
-              onPress={() => setPayModal(true)}
-              activeOpacity={0.85}
-            >
-              <Feather name="arrow-down-left" size={18} color="#FFF" />
-              <Text style={styles.actionBtnText}>Record Payment</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.destructive }]}
-              onPress={() => setCloseModal(true)}
-              activeOpacity={0.85}
-            >
-              <Feather name="lock" size={18} color="#FFF" />
-              <Text style={styles.actionBtnText}>Close Loan</Text>
-            </TouchableOpacity>
+          <View>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.emerald }, isOffline && styles.actionBtnDisabled]}
+                onPress={() => setPayModal(true)}
+                activeOpacity={0.85}
+                disabled={isOffline}
+              >
+                <Feather name="arrow-down-left" size={18} color="#FFF" />
+                <Text style={styles.actionBtnText}>Record Payment</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.destructive }, isOffline && styles.actionBtnDisabled]}
+                onPress={() => setCloseModal(true)}
+                activeOpacity={0.85}
+                disabled={isOffline}
+              >
+                <Feather name="lock" size={18} color="#FFF" />
+                <Text style={styles.actionBtnText}>Close Loan</Text>
+              </TouchableOpacity>
+            </View>
+            {isOffline && (
+              <View style={styles.offlineNote}>
+                <Feather name="wifi-off" size={12} color="#B45309" />
+                <Text style={styles.offlineNoteText}>Not available offline</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -462,6 +474,9 @@ const styles = StyleSheet.create({
   jewMeta: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   actions: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, paddingVertical: 13 },
+  actionBtnDisabled: { opacity: 0.45 },
+  offlineNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 6, marginBottom: 2 },
+  offlineNoteText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#B45309' },
   actionBtnText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   historySection: { marginBottom: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
