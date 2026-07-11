@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useListCustomers, useCreateLoan, useGetCustomer, getGetCustomerQueryKey, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
+import { useListCustomers, useCreateLoan, useGetCustomer, getListLoansQueryKey, useComputeInterest } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, formatIndianDate } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const jewelleryItemSchema = z.object({
   jewelleryType: z.string().min(1, "Type is required"),
@@ -70,13 +71,10 @@ export default function NewLoan() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   // Auto-load customer from URL param (e.g. coming from customer detail page)
-  const urlCustomerId = urlParams.customerId ?? 0;
-  const { data: urlCustomer } = useGetCustomer(urlCustomerId, {
-    query: {
-      queryKey: getGetCustomerQueryKey(urlCustomerId),
-      enabled: !!urlParams.customerId,
-    },
-  });
+  const { data: urlCustomer, isLoading: isLoadingUrlCustomer } = useGetCustomer(
+    urlParams.customerId ?? 0,
+    { query: { enabled: !!urlParams.customerId } } as any
+  );
 
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomers(
     { search: customerSearch, limit: 5 },
@@ -244,6 +242,19 @@ export default function NewLoan() {
           </div>
         </div>
       </div>
+
+      {/* Loading skeleton while pre-loading a customer from URL param */}
+      {urlParams.customerId && isLoadingUrlCustomer && !selectedCustomer && (
+        <Card className="shadow-sm border-border/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {step === 1 && (
         <Card className="shadow-sm border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-300">
