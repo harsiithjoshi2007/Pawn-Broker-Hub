@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Pawn Broker"
+version = "1.0.0"
+id = "artifacts/pawn-broker"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23591
+
+[services.development]
+run = "pnpm --filter @workspace/pawn-broker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pawn-broker", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pawn-broker/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23591"
+BASE_PATH = "/"

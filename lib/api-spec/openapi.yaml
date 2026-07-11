@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Pawn Broker API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: customers
+    description: Customer management
+  - name: loans
+    description: Loan management
+  - name: payments
+    description: Payment tracking
+  - name: dashboard
+    description: Dashboard stats
+  - name: calculator
+    description: Interest calculator
+  - name: reports
+    description: Reports
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +37,1028 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCredentials"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerListResponse"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /loans:
+    get:
+      operationId: listLoans
+      tags: [loans]
+      summary: List loans
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: loanType
+          in: query
+          schema:
+            type: string
+        - name: customerId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Loan list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanListResponse"
+    post:
+      operationId: createLoan
+      tags: [loans]
+      summary: Create loan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+
+  /loans/{id}:
+    get:
+      operationId: getLoan
+      tags: [loans]
+      summary: Get loan details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Loan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateLoan
+      tags: [loans]
+      summary: Update loan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+
+  /loans/{id}/payment:
+    post:
+      operationId: recordPayment
+      tags: [loans]
+      summary: Record a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  /loans/{id}/close:
+    post:
+      operationId: closeLoan
+      tags: [loans]
+      summary: Close a loan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanCloseInput"
+      responses:
+        "200":
+          description: Loan closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+
+  /loans/{id}/renew:
+    post:
+      operationId: renewLoan
+      tags: [loans]
+      summary: Renew a loan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanRenewalInput"
+      responses:
+        "200":
+          description: Loan renewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List payments
+      parameters:
+        - name: loanId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentListResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /calculator/compute:
+    post:
+      operationId: computeInterest
+      tags: [calculator]
+      summary: Calculate interest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatorInput"
+      responses:
+        "200":
+          description: Calculation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculatorResult"
+
+  /reports/collection:
+    get:
+      operationId: getCollectionReport
+      tags: [reports]
+      summary: Get collection report
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+        - name: loanType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Collection report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionReport"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    LoginCredentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, email, name, role]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, staff]
+
+    Customer:
+      type: object
+      required: [id, customerId, name, phone, createdAt]
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: string
+        name:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        phone:
+          type: string
+        whatsapp:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        aadhaarNumber:
+          type: ["string", "null"]
+        panNumber:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        pincode:
+          type: ["string", "null"]
+        activeLoansCount:
+          type: integer
+        createdAt:
+          type: string
+
+    CustomerInput:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        aadhaarNumber:
+          type: string
+        panNumber:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+
+    CustomerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        aadhaarNumber:
+          type: string
+        panNumber:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+
+    CustomerListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    JewelleryItem:
+      type: object
+      required: [id, loanId, jewelleryType, grossWeight, netWeight, purity, estimatedValue]
+      properties:
+        id:
+          type: integer
+        loanId:
+          type: integer
+        jewelleryType:
+          type: string
+        category:
+          type: ["string", "null"]
+        grossWeight:
+          type: number
+        stoneWeight:
+          type: number
+        netWeight:
+          type: number
+        purity:
+          type: string
+        estimatedValue:
+          type: number
+        marketValue:
+          type: ["number", "null"]
+
+    JewelleryItemInput:
+      type: object
+      required: [jewelleryType, grossWeight, purity, estimatedValue]
+      properties:
+        jewelleryType:
+          type: string
+        category:
+          type: string
+        grossWeight:
+          type: number
+        stoneWeight:
+          type: number
+        netWeight:
+          type: number
+        purity:
+          type: string
+        estimatedValue:
+          type: number
+        marketValue:
+          type: number
+
+    Loan:
+      type: object
+      required: [id, loanNumber, customerId, loanType, principalAmount, interestRate, ratePeriod, interestType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        loanNumber:
+          type: string
+        customerId:
+          type: integer
+        customerName:
+          type: ["string", "null"]
+        loanType:
+          type: string
+          enum: [gold, silver]
+        principalAmount:
+          type: number
+        interestRate:
+          type: number
+        ratePeriod:
+          type: string
+          enum: [day, month, year]
+        interestType:
+          type: string
+          enum: [simple, compound]
+        duration:
+          type: integer
+        durationUnit:
+          type: string
+          enum: [days, months, years]
+        startDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        totalInterest:
+          type: number
+        totalPayable:
+          type: number
+        amountPaid:
+          type: number
+        outstandingBalance:
+          type: number
+        penaltyRate:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [active, closed, overdue, auction, partially_paid]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    LoanDetail:
+      type: object
+      required: [id, loanNumber, customerId, loanType, principalAmount, interestRate, ratePeriod, interestType, status, createdAt, jewelleryItems, payments]
+      properties:
+        id:
+          type: integer
+        loanNumber:
+          type: string
+        customerId:
+          type: integer
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        loanType:
+          type: string
+          enum: [gold, silver]
+        principalAmount:
+          type: number
+        interestRate:
+          type: number
+        ratePeriod:
+          type: string
+          enum: [day, month, year]
+        interestType:
+          type: string
+          enum: [simple, compound]
+        duration:
+          type: integer
+        durationUnit:
+          type: string
+          enum: [days, months, years]
+        startDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        totalInterest:
+          type: number
+        totalPayable:
+          type: number
+        amountPaid:
+          type: number
+        outstandingBalance:
+          type: number
+        penaltyRate:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [active, closed, overdue, auction, partially_paid]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        jewelleryItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/JewelleryItem"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+
+    LoanInput:
+      type: object
+      required: [customerId, loanType, principalAmount, interestRate, ratePeriod, interestType, duration, durationUnit, jewelleryItems]
+      properties:
+        customerId:
+          type: integer
+        loanType:
+          type: string
+          enum: [gold, silver]
+        principalAmount:
+          type: number
+        interestRate:
+          type: number
+        ratePeriod:
+          type: string
+          enum: [day, month, year]
+        interestType:
+          type: string
+          enum: [simple, compound]
+        duration:
+          type: integer
+        durationUnit:
+          type: string
+          enum: [days, months, years]
+        penaltyRate:
+          type: number
+        notes:
+          type: string
+        jewelleryItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/JewelleryItemInput"
+
+    LoanUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        notes:
+          type: string
+        penaltyRate:
+          type: number
+
+    LoanCloseInput:
+      type: object
+      required: [paymentMode]
+      properties:
+        discount:
+          type: number
+        paymentMode:
+          type: string
+          enum: [cash, upi, bank_transfer, cheque]
+        referenceNumber:
+          type: string
+        notes:
+          type: string
+
+    LoanRenewalInput:
+      type: object
+      required: [newInterestRate, newDuration, newDurationUnit]
+      properties:
+        newInterestRate:
+          type: number
+        newDuration:
+          type: integer
+        newDurationUnit:
+          type: string
+          enum: [days, months, years]
+        capitalizeInterest:
+          type: boolean
+        remarks:
+          type: string
+
+    LoanListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Loan"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Payment:
+      type: object
+      required: [id, receiptNumber, loanId, paymentDate, amount, paymentMode, createdAt]
+      properties:
+        id:
+          type: integer
+        receiptNumber:
+          type: string
+        loanId:
+          type: integer
+        paymentDate:
+          type: string
+        amount:
+          type: number
+        interestPaid:
+          type: number
+        principalPaid:
+          type: number
+        penaltyPaid:
+          type: number
+        remainingPrincipal:
+          type: number
+        remainingInterest:
+          type: number
+        paymentMode:
+          type: string
+          enum: [cash, upi, bank_transfer, cheque]
+        referenceNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PaymentInput:
+      type: object
+      required: [amount, paymentMode, paymentDate]
+      properties:
+        paymentDate:
+          type: string
+        amount:
+          type: number
+        interestPaid:
+          type: number
+        principalPaid:
+          type: number
+        penaltyPaid:
+          type: number
+        paymentMode:
+          type: string
+          enum: [cash, upi, bank_transfer, cheque]
+        referenceNumber:
+          type: string
+        notes:
+          type: string
+
+    PaymentListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalActiveLoans, totalOverdueLoans, totalClosedLoans, totalAuctionLoans, todayCollection, monthlyIncome, loanPortfolioValue, goldLoansCount, silverLoansCount, recentLoans, monthlyDisbursement, loanStatusBreakdown]
+      properties:
+        totalActiveLoans:
+          type: integer
+        totalOverdueLoans:
+          type: integer
+        totalClosedLoans:
+          type: integer
+        totalAuctionLoans:
+          type: integer
+        todayCollection:
+          type: number
+        monthlyIncome:
+          type: number
+        loanPortfolioValue:
+          type: number
+        goldLoansCount:
+          type: integer
+        silverLoansCount:
+          type: integer
+        recentLoans:
+          type: array
+          items:
+            $ref: "#/components/schemas/Loan"
+        monthlyDisbursement:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyDisbursementItem"
+        loanStatusBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusBreakdownItem"
+
+    MonthlyDisbursementItem:
+      type: object
+      required: [month, amount, count]
+      properties:
+        month:
+          type: string
+        amount:
+          type: number
+        count:
+          type: integer
+
+    StatusBreakdownItem:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+
+    CalculatorInput:
+      type: object
+      required: [principal, interestRate, ratePeriod, interestType, duration, durationUnit]
+      properties:
+        principal:
+          type: number
+        interestRate:
+          type: number
+        ratePeriod:
+          type: string
+          enum: [day, month, year]
+        interestType:
+          type: string
+          enum: [simple, compound]
+        duration:
+          type: integer
+        durationUnit:
+          type: string
+          enum: [days, months, years]
+        penaltyRate:
+          type: number
+        overdueDays:
+          type: integer
+
+    CalculatorResult:
+      type: object
+      required: [totalInterest, penaltyInterest, totalPayable, monthlyBreakdown]
+      properties:
+        totalInterest:
+          type: number
+        penaltyInterest:
+          type: number
+        totalPayable:
+          type: number
+        monthlyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyBreakdownItem"
+
+    MonthlyBreakdownItem:
+      type: object
+      required: [period, interest, balance]
+      properties:
+        period:
+          type: string
+        interest:
+          type: number
+        balance:
+          type: number
+
+    CollectionReport:
+      type: object
+      required: [totalCollected, totalInterestCollected, totalPrincipalCollected, transactionCount, payments]
+      properties:
+        from:
+          type: ["string", "null"]
+        to:
+          type: ["string", "null"]
+        totalCollected:
+          type: number
+        totalInterestCollected:
+          type: number
+        totalPrincipalCollected:
+          type: number
+        transactionCount:
+          type: integer
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"

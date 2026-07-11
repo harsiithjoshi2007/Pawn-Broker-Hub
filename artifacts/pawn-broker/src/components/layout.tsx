@@ -1,0 +1,110 @@
+import { ReactNode } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
+import { 
+  LayoutDashboard, Users, FileText, CreditCard, 
+  BarChart3, Calculator, Bell, Settings, LogOut, Diamond, Menu, Moon, Sun, Search
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+
+function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
+  const [location] = useLocation();
+  const isActive = location === href || location.startsWith(`${href}/`);
+  return (
+    <Link href={href} className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`}>
+      <Icon className="h-5 w-5" />
+      {label}
+    </Link>
+  );
+}
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const { theme, setTheme } = useTheme();
+
+  if (!user) {
+    setLocation("/login");
+    return null;
+  }
+
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/customers", label: "Customers", icon: Users },
+    { href: "/loans", label: "Loans", icon: FileText },
+    { href: "/payments", label: "Payments", icon: CreditCard },
+    { href: "/reports", label: "Reports", icon: BarChart3 },
+    { href: "/calculator", label: "Calculator", icon: Calculator },
+  ];
+
+  return (
+    <div className="flex h-[100dvh] bg-background text-foreground overflow-hidden">
+      {/* Sidebar */}
+      <aside className="hidden md:flex w-60 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-10 shadow-lg relative">
+        <div className="flex h-16 items-center px-4 gap-3 border-b border-sidebar-border">
+          <Diamond className="h-6 w-6 text-sidebar-primary" />
+          <span className="text-lg font-bold text-white tracking-wide">Pawn Broker</span>
+        </div>
+        
+        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+          {navItems.map((item) => (
+            <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-sidebar-border bg-sidebar/50">
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar className="h-9 w-9 bg-sidebar-primary text-sidebar-primary-foreground">
+              <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-medium text-white truncate">{user.name}</span>
+              <span className="text-xs text-sidebar-foreground/70 capitalize truncate">{user.role}</span>
+            </div>
+          </div>
+          <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white" onClick={() => logout()}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <header className="h-16 flex items-center px-4 gap-4 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
+          <Button variant="ghost" size="icon" className="md:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+          
+          <div className="flex-1 max-w-md relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input type="search" placeholder="Search customers or loans..." className="w-full pl-9 bg-muted/50 border-transparent focus-visible:ring-1 focus-visible:ring-primary shadow-inner" />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground transition-colors" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative transition-colors">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground transition-colors">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-background/50">
+          <div className="max-w-7xl mx-auto h-full">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
