@@ -39,10 +39,10 @@ async function sendTwilioMessage(
 ): Promise<void> {
   // Call Twilio REST API directly with HTTP Basic Auth (Account SID + Auth Token).
   // The Replit connector proxy uses JWT which Twilio REST API does not accept for SMS.
-  const normalizedTo   = toE164(to);
-  const normalizedFrom = toE164(fromNumber);
-  const toNum   = useWhatsApp ? `whatsapp:${normalizedTo}`   : normalizedTo;
-  const fromNum = useWhatsApp ? `whatsapp:${normalizedFrom}` : normalizedFrom;
+  // Only normalise the customer's number — the shop's Twilio number is already correct.
+  const normalizedTo = toE164(to);
+  const toNum   = useWhatsApp ? `whatsapp:${normalizedTo}` : normalizedTo;
+  const fromNum = useWhatsApp ? `whatsapp:${fromNumber}`   : fromNumber;
 
   const basicAuth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
