@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
+import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/lib/auth';
 import { AppLayout } from '@/components/layout';
@@ -33,6 +33,7 @@ const queryClient = new QueryClient({
 });
 
 function Router() {
+  const [location] = useLocation();
   return (
     <Switch>
       <Route path="/login" component={Login} />
@@ -40,7 +41,7 @@ function Router() {
         <Redirect to="/dashboard" />
       </Route>
       <Route path="/:rest*">
-        <ErrorBoundary>
+        <ErrorBoundary key={location}>
           <AppLayout>
             <Switch>
               <Route path="/dashboard" component={Dashboard} />
