@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -11,10 +11,12 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider } from '@/context/auth';
+import { Platform } from 'react-native';
 
 // Set the API base URL at module level — must be called outside any component
 // so it runs exactly once before any queries fire.
@@ -35,6 +37,30 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
+  const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+    // Only set up notification listeners on native platforms
+    if (Platform.OS === 'web') return;
+
+    // Handle taps on notifications — navigate to the relevant loan detail screen
+    notificationResponseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as {
+          loanId?: number;
+          screen?: string;
+        } | undefined;
+
+        if (data?.loanId && data.screen === 'loan-detail') {
+          router.push(`/loan/${data.loanId}`);
+        }
+      });
+
+    return () => {
+      notificationResponseListener.current?.remove();
+    };
+  }, []);
+
   return (
     <Stack
       screenOptions={{

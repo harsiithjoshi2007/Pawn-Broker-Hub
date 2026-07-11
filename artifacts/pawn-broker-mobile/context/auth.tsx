@@ -8,8 +8,12 @@ import {
 } from '@workspace/api-client-react';
 import type { AuthUser } from '@workspace/api-client-react';
 import { router } from 'expo-router';
+import { registerForPushNotificationsAsync } from '@/hooks/usePushNotifications';
 
 const TOKEN_KEY = 'pawn_auth_token';
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : '';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -19,6 +23,34 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+/** Fire-and-forget: register an Expo push token with the API. */
+async function sendPushTokenToServer(token: string, authToken: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/notifications/push-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ pushToken: token }),
+    });
+  } catch {
+    // Best-effort — don't block login if this fails
+  }
+}
+
+/** Fire-and-forget: clear push token from the API on logout. */
+async function clearPushTokenFromServer(authToken: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/notifications/push-token`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+  } catch {
+    // Best-effort
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
@@ -86,12 +118,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.token);
         // Invalidate so useGetMe refetches with the new token
         await queryClient.invalidateQueries();
+
+        // Register push token in the background (native only)
+        registerForPushNotificationsAsync().then((pushToken) => {
+          if (pushToken) {
+            sendPushTokenToServer(pushToken, result.token!);
+          }
+        });
       }
     },
     [loginMutation, queryClient],
   );
 
   const logout = useCallback(async () => {
+    // Clear push token from the server before wiping the local token
+    if (tokenRef.current) {
+      await clearPushTokenFromServer(tokenRef.current);
+    }
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
     tokenRef.current = null;
     setToken(null);

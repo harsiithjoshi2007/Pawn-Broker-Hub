@@ -7,6 +7,7 @@ import paymentsRouter from "./payments";
 import dashboardRouter from "./dashboard";
 import calculatorRouter from "./calculator";
 import reportsRouter from "./reports";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(paymentsRouter);
 router.use(dashboardRouter);
 router.use(calculatorRouter);
 router.use(reportsRouter);
+router.use(notificationsRouter);
 
 export default router;

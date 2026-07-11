@@ -9,6 +9,7 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   role: text("role").notNull().default("staff"), // admin | manager | staff
   active: boolean("active").notNull().default(true),
+  pushToken: text("push_token"), // Expo push token for mobile notifications
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
